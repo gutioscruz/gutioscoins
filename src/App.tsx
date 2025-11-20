@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { FinanceProvider } from "@/contexts/FinanceContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import Transactions from "./pages/Transactions";
+import RecurringTransactions from "./pages/RecurringTransactions";
 import Categories from "./pages/Categories";
 import Banks from "./pages/Banks";
 import Budget from "./pages/Budget";
@@ -30,6 +31,7 @@ const App = () => (
               </header>
               <Routes>
                 <Route path="/" element={<Transactions />} />
+                <Route path="/recurring" element={<RecurringTransactions />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/banks" element={<Banks />} />
                 <Route path="/budget" element={<Budget />} />

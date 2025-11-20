@@ -1,18 +1,31 @@
+import { useState, useMemo } from "react";
+import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Header } from "@/components/finance/Header";
 import { SummaryCards } from "@/components/finance/SummaryCards";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { MonthlyChart } from "@/components/finance/MonthlyChart";
 import { AddTransactionDialog } from "@/components/finance/AddTransactionDialog";
+import { PeriodFilter } from "@/components/finance/PeriodFilter";
 import { useFinance } from "@/contexts/FinanceContext";
 
 const Transactions = () => {
   const { transactions, categories, banks, addTransaction } = useFinance();
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
 
-  const totalIncome = transactions
+  const filteredTransactions = useMemo(() => {
+    if (!startDate || !endDate) return transactions;
+    
+    return transactions.filter((t) =>
+      isWithinInterval(new Date(t.date), { start: startDate, end: endDate })
+    );
+  }, [transactions, startDate, endDate]);
+
+  const totalIncome = filteredTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = filteredTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -22,13 +35,23 @@ const Transactions = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8 space-y-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-3xl font-bold">Controle Financeiro</h1>
-          <AddTransactionDialog 
-            onAddTransaction={addTransaction}
-            categories={categories}
-            banks={banks}
-          />
+          <div className="flex flex-wrap gap-2 items-center">
+            <PeriodFilter
+              startDate={startDate}
+              endDate={endDate}
+              onPeriodChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+            />
+            <AddTransactionDialog 
+              onAddTransaction={addTransaction}
+              categories={categories}
+              banks={banks}
+            />
+          </div>
         </div>
 
         <SummaryCards
@@ -39,12 +62,12 @@ const Transactions = () => {
 
         <div className="grid gap-8 md:grid-cols-2">
           <TransactionList 
-            transactions={transactions}
+            transactions={filteredTransactions}
             categories={categories}
             banks={banks}
           />
           <MonthlyChart 
-            transactions={transactions}
+            transactions={filteredTransactions}
             categories={categories}
           />
         </div>

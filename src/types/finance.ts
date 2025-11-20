@@ -1,6 +1,7 @@
 export type TransactionType = "income" | "expense";
 export type BankType = "checking" | "savings" | "credit";
 export type InvestmentType = "stocks" | "funds" | "crypto" | "fixed-income" | "other";
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Category {
   id: string;
@@ -51,6 +52,22 @@ export interface Transaction {
   subcategory?: string;
   bankId: string;
   date: Date;
+  recurringTransactionId?: string;
+}
+
+export interface RecurringTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  categoryId: string;
+  subcategory?: string;
+  bankId: string;
+  frequency: RecurrenceFrequency;
+  startDate: Date;
+  endDate?: Date;
+  isActive: boolean;
+  lastGenerated?: Date;
 }
 
 export const defaultIncomeCategories: Category[] = [
