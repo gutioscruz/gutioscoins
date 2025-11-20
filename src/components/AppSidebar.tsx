@@ -35,14 +35,20 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r transition-all duration-300">
-      <div className="h-14 flex items-center px-4 border-b transition-all duration-300">
+      <div className="h-14 flex items-center px-3 border-b transition-all duration-300">
         <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-            <Coins className="w-5 h-5 text-primary-foreground" />
+          <div className={`flex items-center justify-center rounded-lg bg-primary transition-all duration-300 ${
+            collapsed ? 'w-7 h-7' : 'w-8 h-8'
+          }`}>
+            <Coins className={`text-primary-foreground transition-all duration-300 ${
+              collapsed ? 'w-4 h-4' : 'w-5 h-5'
+            }`} />
           </div>
-          {!collapsed && (
-            <span className="text-lg font-bold text-foreground">GutiosCoins</span>
-          )}
+          <span className={`text-lg font-bold text-foreground transition-all duration-300 ${
+            collapsed ? 'opacity-0 w-0' : 'opacity-100'
+          }`}>
+            GutiosCoins
+          </span>
         </div>
       </div>
       <SidebarContent>
