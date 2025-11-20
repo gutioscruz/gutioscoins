@@ -9,7 +9,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { FinanceProvider } from "@/contexts/FinanceContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
-import { UserMenu } from "@/components/UserMenu";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import RecurringTransactions from "./pages/RecurringTransactions";
@@ -42,20 +41,19 @@ const App = () => (
                         <div className="flex min-h-screen w-full">
                           <AppSidebar />
                           <SidebarInset className="flex-1">
-                            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 justify-end">
-                              <UserMenu />
-                            </header>
-                            <Routes>
-                              <Route path="/" element={<Transactions />} />
-                              <Route path="/dashboard" element={<Dashboard />} />
-                              <Route path="/recurring" element={<RecurringTransactions />} />
-                              <Route path="/categories" element={<Categories />} />
-                              <Route path="/banks" element={<Banks />} />
-                              <Route path="/budget" element={<Budget />} />
-                              <Route path="/goals" element={<Goals />} />
-                              <Route path="/loans" element={<Loans />} />
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
+                            <main className="p-6">
+                              <Routes>
+                                <Route path="/" element={<Transactions />} />
+                                <Route path="/dashboard" element={<Dashboard />} />
+                                <Route path="/recurring" element={<RecurringTransactions />} />
+                                <Route path="/categories" element={<Categories />} />
+                                <Route path="/banks" element={<Banks />} />
+                                <Route path="/budget" element={<Budget />} />
+                                <Route path="/goals" element={<Goals />} />
+                                <Route path="/loans" element={<Loans />} />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </main>
                           </SidebarInset>
                         </div>
                       </SidebarProvider>

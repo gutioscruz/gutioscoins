@@ -2,6 +2,7 @@ import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, 
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/UserMenu";
 
 import {
   Sidebar,
@@ -33,8 +34,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <div className="h-14 flex items-center px-4 border-b">
+    <Sidebar collapsible="icon" className="border-r transition-all duration-300">
+      <div className="h-14 flex items-center px-4 border-b transition-all duration-300">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
             <Coins className="w-5 h-5 text-primary-foreground" />
@@ -50,11 +51,16 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1 p-2">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined} className="h-11">
+                  <SidebarMenuButton 
+                    asChild 
+                    tooltip={collapsed ? item.title : undefined}
+                    className="h-11"
+                  >
                     <NavLink 
                       to={item.url} 
                       end={item.url === "/"}
-                      className="flex items-center gap-3 px-3 py-2 text-base font-medium"
+                      className="flex items-center gap-3 px-3 py-2 text-base font-medium transition-colors"
+                      title={item.title}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       <span className="truncate">{item.title}</span>
@@ -73,6 +79,7 @@ export function AppSidebar() {
           size={collapsed ? "icon" : "default"}
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="w-full justify-start h-11"
+          title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
         >
           {theme === "dark" ? (
             <>
@@ -91,10 +98,14 @@ export function AppSidebar() {
           size={collapsed ? "icon" : "default"}
           onClick={toggleSidebar}
           className="w-full justify-start h-11"
+          title="Painel Lateral"
         >
           <PanelLeft className="h-5 w-5 shrink-0" />
           {!collapsed && <span className="ml-3">Painel Lateral</span>}
         </Button>
+        <div className="w-full">
+          <UserMenu collapsed={collapsed} />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
