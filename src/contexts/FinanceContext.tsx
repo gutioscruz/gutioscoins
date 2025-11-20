@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { Transaction, Category, Bank, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
+import { Transaction, Category, Bank, Investment, Card, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
 
 interface FinanceContextType {
   transactions: Transaction[];
   categories: Category[];
   banks: Bank[];
+  investments: Investment[];
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
   addCategory: (category: Omit<Category, "id">) => void;
   updateCategory: (id: string, category: Omit<Category, "id">) => void;
@@ -14,6 +15,12 @@ interface FinanceContextType {
   addBank: (bank: Omit<Bank, "id">) => void;
   updateBank: (id: string, bank: Omit<Bank, "id">) => void;
   deleteBank: (id: string) => void;
+  addCardToBank: (bankId: string, card: Omit<Card, "id">) => void;
+  updateCard: (bankId: string, cardId: string, card: Omit<Card, "id">) => void;
+  deleteCard: (bankId: string, cardId: string) => void;
+  addInvestment: (investment: Omit<Investment, "id">) => void;
+  updateInvestment: (id: string, investment: Omit<Investment, "id">) => void;
+  deleteInvestment: (id: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -37,9 +44,23 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     ...defaultExpenseCategories,
   ]);
   const [banks, setBanks] = useState<Bank[]>([
-    { id: "1", name: "Nubank", type: "checking", balance: 5420.50, color: "#8B5CF6" },
-    { id: "2", name: "Inter", type: "savings", balance: 12000.00, color: "#FF6B00" },
-    { id: "3", name: "Itaú", type: "credit", limit: 8000.00, balance: 2340.00, color: "#EC7000" },
+    { id: "1", name: "Nubank", type: "checking", balance: 5420.50, color: "#8B5CF6", cards: [] },
+    { id: "2", name: "Inter", type: "savings", balance: 12000.00, color: "#FF6B00", cards: [] },
+    { 
+      id: "3", 
+      name: "Itaú", 
+      type: "credit", 
+      limit: 8000.00, 
+      balance: 2340.00, 
+      color: "#EC7000",
+      cards: [
+        { id: "c1", name: "Cartão Principal", limit: 8000, used: 2340, color: "#EC7000" }
+      ]
+    },
+  ]);
+  const [investments, setInvestments] = useState<Investment[]>([
+    { id: "i1", name: "Tesouro Selic", type: "fixed-income", amount: 15000, profitability: 12.5, color: "#10b981" },
+    { id: "i2", name: "Ações ITSA4", type: "stocks", amount: 8500, profitability: 8.2, color: "#3b82f6" },
   ]);
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
@@ -102,12 +123,64 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     setBanks(banks.filter(b => b.id !== id));
   };
 
+  const addCardToBank = (bankId: string, card: Omit<Card, "id">) => {
+    const newCard: Card = {
+      ...card,
+      id: Date.now().toString(),
+    };
+    setBanks(banks.map(b => 
+      b.id === bankId 
+        ? { ...b, cards: [...(b.cards || []), newCard] }
+        : b
+    ));
+  };
+
+  const updateCard = (bankId: string, cardId: string, card: Omit<Card, "id">) => {
+    setBanks(banks.map(b => 
+      b.id === bankId 
+        ? { 
+            ...b, 
+            cards: (b.cards || []).map(c => 
+              c.id === cardId ? { ...card, id: cardId } : c
+            )
+          }
+        : b
+    ));
+  };
+
+  const deleteCard = (bankId: string, cardId: string) => {
+    setBanks(banks.map(b => 
+      b.id === bankId 
+        ? { ...b, cards: (b.cards || []).filter(c => c.id !== cardId) }
+        : b
+    ));
+  };
+
+  const addInvestment = (investment: Omit<Investment, "id">) => {
+    const newInvestment: Investment = {
+      ...investment,
+      id: Date.now().toString(),
+    };
+    setInvestments([...investments, newInvestment]);
+  };
+
+  const updateInvestment = (id: string, investment: Omit<Investment, "id">) => {
+    setInvestments(investments.map(inv => 
+      inv.id === id ? { ...investment, id } : inv
+    ));
+  };
+
+  const deleteInvestment = (id: string) => {
+    setInvestments(investments.filter(inv => inv.id !== id));
+  };
+
   return (
     <FinanceContext.Provider
       value={{
         transactions,
         categories,
         banks,
+        investments,
         addTransaction,
         addCategory,
         updateCategory,
@@ -117,6 +190,12 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
         addBank,
         updateBank,
         deleteBank,
+        addCardToBank,
+        updateCard,
+        deleteCard,
+        addInvestment,
+        updateInvestment,
+        deleteInvestment,
       }}
     >
       {children}
