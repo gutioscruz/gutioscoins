@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,11 +6,18 @@ import { defaultIncomeCategories, defaultExpenseCategories } from '@/types/finan
 
 export const useInitializeUserData = () => {
   const { user } = useAuth();
-  const { categories } = useCategories();
+  const { categories, isLoading } = useCategories();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const initializeCategories = async () => {
-      if (!user || categories.length > 0) return;
+      if (!user || isLoading || hasInitialized.current) return;
+      if (categories.length > 0) {
+        hasInitialized.current = true;
+        return;
+      }
+
+      hasInitialized.current = true;
 
       // Insert default categories for new users
       const defaultCategories = [...defaultIncomeCategories, ...defaultExpenseCategories];
@@ -26,5 +33,5 @@ export const useInitializeUserData = () => {
     };
 
     initializeCategories();
-  }, [user, categories]);
+  }, [user, categories, isLoading]);
 };
