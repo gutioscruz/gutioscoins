@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Header } from "@/components/finance/Header";
 import { SummaryCards } from "@/components/finance/SummaryCards";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { MonthlyChart } from "@/components/finance/MonthlyChart";
@@ -33,10 +32,9 @@ const Transactions = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-3xl font-bold">Controle Financeiro</h1>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <div className="flex flex-wrap gap-2 items-center">
             <PeriodFilter
               startDate={startDate}

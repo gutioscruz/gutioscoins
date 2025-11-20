@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { Header } from "@/components/finance/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFinance } from "@/contexts/FinanceContext";
 import { 
@@ -113,7 +112,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>

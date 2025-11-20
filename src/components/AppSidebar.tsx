@@ -1,4 +1,4 @@
-import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun } from "lucide-react";
+import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+            <Coins className="w-5 h-5 text-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <span className="text-lg font-bold text-foreground">GutiosCoins</span>
+          )}
+        </div>
+      </div>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
