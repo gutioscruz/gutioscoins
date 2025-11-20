@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Transaction } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { transactionSchema } from '@/lib/validations';
 
 export const useTransactions = () => {
   const queryClient = useQueryClient();
@@ -39,17 +40,28 @@ export const useTransactions = () => {
     mutationFn: async (transaction: Omit<Transaction, 'id'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = transactionSchema.parse({
+        description: transaction.description,
+        amount: transaction.amount,
+        type: transaction.type,
+        date: new Date(transaction.date),
+        categoryId: transaction.categoryId,
+        bankId: transaction.bankId,
+        subcategory: transaction.subcategory,
+      });
+
       const { data, error } = await supabase
         .from('transactions')
         .insert({
           user_id: user.id,
-          description: transaction.description,
-          amount: transaction.amount,
-          type: transaction.type,
-          category_id: transaction.categoryId,
-          subcategory: transaction.subcategory,
-          bank_id: transaction.bankId,
-          date: transaction.date.toISOString(),
+          description: validated.description,
+          amount: validated.amount,
+          type: validated.type,
+          category_id: validated.categoryId,
+          subcategory: validated.subcategory,
+          bank_id: validated.bankId,
+          date: validated.date.toISOString(),
           recurring_transaction_id: transaction.recurringTransactionId,
         })
         .select()
@@ -69,6 +81,38 @@ export const useTransactions = () => {
 
   const updateTransaction = useMutation({
     mutationFn: async ({ id, transaction }: { id: string; transaction: Partial<Transaction> }) => {
+      // Validate if we have all required fields for full validation
+      if (transaction.description && transaction.amount && transaction.type && transaction.date && transaction.categoryId && transaction.bankId) {
+        const validated = transactionSchema.parse({
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          date: new Date(transaction.date),
+          categoryId: transaction.categoryId,
+          bankId: transaction.bankId,
+          subcategory: transaction.subcategory,
+        });
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({
+            description: validated.description,
+            amount: validated.amount,
+            type: validated.type,
+            category_id: validated.categoryId,
+            subcategory: validated.subcategory,
+            bank_id: validated.bankId,
+            date: validated.date.toISOString(),
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      // Partial update without full validation
       const { data, error } = await supabase
         .from('transactions')
         .update({

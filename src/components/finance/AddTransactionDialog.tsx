@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Transaction, TransactionType, Category, Bank } from "@/types/finance";
 import { toast } from "sonner";
+import { transactionSchema } from "@/lib/validations";
+import { z } from "zod";
 
 interface AddTransactionDialogProps {
   onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
@@ -48,30 +50,56 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
       return;
     }
 
-    const transaction: Omit<Transaction, "id"> = {
-      description,
-      amount: parseFloat(amount),
-      type,
-      categoryId,
-      subcategory: subcategory || undefined,
-      bankId,
-      date: new Date(date),
-    };
+    try {
+      // Parse and validate the amount
+      const numericAmount = parseFloat(amount);
+      if (isNaN(numericAmount)) {
+        toast.error("Valor inválido");
+        return;
+      }
 
-    onAddTransaction(transaction);
-    
-    toast.success(
-      type === "income" ? "Receita adicionada com sucesso!" : "Despesa adicionada com sucesso!"
-    );
+      // Validate the transaction data
+      const validated = transactionSchema.parse({
+        description,
+        amount: numericAmount,
+        type,
+        categoryId,
+        subcategory: subcategory || undefined,
+        bankId,
+        date: new Date(date),
+      });
 
-    // Reset form
-    setDescription("");
-    setAmount("");
-    setCategoryId("");
-    setSubcategory("");
-    setBankId("");
-    setDate(new Date().toISOString().split("T")[0]);
-    setOpen(false);
+      const transaction: Omit<Transaction, "id"> = {
+        description: validated.description,
+        amount: validated.amount,
+        type: validated.type,
+        categoryId: validated.categoryId,
+        subcategory: validated.subcategory,
+        bankId: validated.bankId,
+        date: validated.date,
+      };
+
+      onAddTransaction(transaction);
+      
+      toast.success(
+        type === "income" ? "Receita adicionada com sucesso!" : "Despesa adicionada com sucesso!"
+      );
+
+      // Reset form
+      setDescription("");
+      setAmount("");
+      setCategoryId("");
+      setSubcategory("");
+      setBankId("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setOpen(false);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error("Erro ao adicionar transação");
+      }
+    }
   };
 
   return (

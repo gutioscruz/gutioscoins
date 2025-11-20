@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Alert } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { alertSchema } from '@/lib/validations';
 
 export const useAlerts = () => {
   const queryClient = useQueryClient();
@@ -76,13 +77,16 @@ export const useAlerts = () => {
     mutationFn: async (alert: Omit<Alert, 'id' | 'createdAt' | 'read'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = alertSchema.parse(alert);
+
       const { data, error } = await supabase
         .from('alerts')
         .insert({
           user_id: user.id,
-          type: alert.type,
-          title: alert.title,
-          message: alert.message,
+          type: validated.type,
+          title: validated.title,
+          message: validated.message,
           read: false,
         })
         .select()

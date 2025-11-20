@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FinancialGoal } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { goalSchema } from '@/lib/validations';
 
 export const useGoals = () => {
   const queryClient = useQueryClient();
@@ -40,18 +41,30 @@ export const useGoals = () => {
     mutationFn: async (goal: Omit<FinancialGoal, 'id' | 'createdAt'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = goalSchema.parse({
+        name: goal.name,
+        description: goal.description,
+        type: goal.type,
+        targetAmount: goal.targetAmount,
+        currentAmount: goal.currentAmount,
+        deadline: goal.deadline,
+        status: goal.status,
+        categoryId: goal.categoryId,
+      });
+
       const { data, error } = await supabase
         .from('goals')
         .insert({
           user_id: user.id,
-          name: goal.name,
-          description: goal.description,
-          type: goal.type,
-          target_amount: goal.targetAmount,
-          current_amount: goal.currentAmount,
-          deadline: goal.deadline.toISOString(),
-          status: goal.status,
-          category_id: goal.categoryId,
+          name: validated.name,
+          description: validated.description,
+          type: validated.type,
+          target_amount: validated.targetAmount,
+          current_amount: validated.currentAmount,
+          deadline: validated.deadline.toISOString(),
+          status: validated.status,
+          category_id: validated.categoryId,
         })
         .select()
         .single();
