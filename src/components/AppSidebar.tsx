@@ -34,7 +34,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <div className="p-4 border-b">
+      <div className="h-14 flex items-center px-4 border-b">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
             <Coins className="w-5 h-5 text-primary-foreground" />
