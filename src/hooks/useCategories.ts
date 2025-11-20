@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { categorySchema } from '@/lib/validations';
 
 export const useCategories = () => {
   const queryClient = useQueryClient();
@@ -34,13 +35,16 @@ export const useCategories = () => {
     mutationFn: async (category: Omit<Category, 'id'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = categorySchema.parse(category);
+
       const { data, error } = await supabase
         .from('categories')
         .insert({
           user_id: user.id,
-          name: category.name,
-          type: category.type,
-          subcategories: category.subcategories,
+          name: validated.name,
+          type: validated.type,
+          subcategories: validated.subcategories,
         })
         .select()
         .single();
@@ -59,12 +63,15 @@ export const useCategories = () => {
 
   const updateCategory = useMutation({
     mutationFn: async ({ id, category }: { id: string; category: Omit<Category, 'id'> }) => {
+      // Validate input
+      const validated = categorySchema.parse(category);
+
       const { data, error } = await supabase
         .from('categories')
         .update({
-          name: category.name,
-          type: category.type,
-          subcategories: category.subcategories,
+          name: validated.name,
+          type: validated.type,
+          subcategories: validated.subcategories,
         })
         .eq('id', id)
         .select()

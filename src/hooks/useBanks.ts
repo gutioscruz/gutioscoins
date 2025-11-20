@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Bank } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { bankSchema } from '@/lib/validations';
 
 export const useBanks = () => {
   const queryClient = useQueryClient();
@@ -43,15 +44,18 @@ export const useBanks = () => {
     mutationFn: async (bank: Omit<Bank, 'id'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = bankSchema.parse(bank);
+
       const { data, error } = await supabase
         .from('banks')
         .insert({
           user_id: user.id,
-          name: bank.name,
-          type: bank.type,
-          balance: bank.balance,
-          limit_amount: bank.limit,
-          color: bank.color,
+          name: validated.name,
+          type: validated.type,
+          balance: validated.balance,
+          limit_amount: validated.limit,
+          color: validated.color,
         })
         .select()
         .single();
@@ -70,14 +74,17 @@ export const useBanks = () => {
 
   const updateBank = useMutation({
     mutationFn: async ({ id, bank }: { id: string; bank: Omit<Bank, 'id'> }) => {
+      // Validate input
+      const validated = bankSchema.parse(bank);
+
       const { data, error } = await supabase
         .from('banks')
         .update({
-          name: bank.name,
-          type: bank.type,
-          balance: bank.balance,
-          limit_amount: bank.limit,
-          color: bank.color,
+          name: validated.name,
+          type: validated.type,
+          balance: validated.balance,
+          limit_amount: validated.limit,
+          color: validated.color,
         })
         .eq('id', id)
         .select()

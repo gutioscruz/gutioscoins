@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Investment } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { investmentSchema } from '@/lib/validations';
 
 export const useInvestments = () => {
   const queryClient = useQueryClient();
@@ -36,15 +37,18 @@ export const useInvestments = () => {
     mutationFn: async (investment: Omit<Investment, 'id'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = investmentSchema.parse(investment);
+
       const { data, error } = await supabase
         .from('investments')
         .insert({
           user_id: user.id,
-          name: investment.name,
-          type: investment.type,
-          amount: investment.amount,
-          profitability: investment.profitability,
-          color: investment.color,
+          name: validated.name,
+          type: validated.type,
+          amount: validated.amount,
+          profitability: validated.profitability,
+          color: validated.color,
         })
         .select()
         .single();
@@ -63,14 +67,17 @@ export const useInvestments = () => {
 
   const updateInvestment = useMutation({
     mutationFn: async ({ id, investment }: { id: string; investment: Omit<Investment, 'id'> }) => {
+      // Validate input
+      const validated = investmentSchema.parse(investment);
+
       const { data, error } = await supabase
         .from('investments')
         .update({
-          name: investment.name,
-          type: investment.type,
-          amount: investment.amount,
-          profitability: investment.profitability,
-          color: investment.color,
+          name: validated.name,
+          type: validated.type,
+          amount: validated.amount,
+          profitability: validated.profitability,
+          color: validated.color,
         })
         .eq('id', id)
         .select()

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RecurringTransaction } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { recurringTransactionSchema } from '@/lib/validations';
 
 export const useRecurringTransactions = () => {
   const queryClient = useQueryClient();
@@ -42,20 +43,34 @@ export const useRecurringTransactions = () => {
     mutationFn: async (transaction: Omit<RecurringTransaction, 'id'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input
+      const validated = recurringTransactionSchema.parse({
+        description: transaction.description,
+        amount: transaction.amount,
+        type: transaction.type,
+        frequency: transaction.frequency,
+        startDate: transaction.startDate,
+        endDate: transaction.endDate,
+        isActive: transaction.isActive,
+        categoryId: transaction.categoryId,
+        bankId: transaction.bankId,
+        subcategory: transaction.subcategory,
+      });
+
       const { data, error } = await supabase
         .from('recurring_transactions')
         .insert({
           user_id: user.id,
-          description: transaction.description,
-          amount: transaction.amount,
-          type: transaction.type,
-          category_id: transaction.categoryId,
-          subcategory: transaction.subcategory,
-          bank_id: transaction.bankId,
-          frequency: transaction.frequency,
-          start_date: transaction.startDate.toISOString(),
-          end_date: transaction.endDate?.toISOString(),
-          is_active: transaction.isActive,
+          description: validated.description,
+          amount: validated.amount,
+          type: validated.type,
+          category_id: validated.categoryId,
+          subcategory: validated.subcategory,
+          bank_id: validated.bankId,
+          frequency: validated.frequency,
+          start_date: validated.startDate.toISOString(),
+          end_date: validated.endDate?.toISOString(),
+          is_active: validated.isActive,
           last_generated: transaction.lastGenerated?.toISOString(),
         })
         .select()
@@ -75,19 +90,33 @@ export const useRecurringTransactions = () => {
 
   const updateRecurringTransaction = useMutation({
     mutationFn: async ({ id, transaction }: { id: string; transaction: Omit<RecurringTransaction, 'id'> }) => {
+      // Validate input
+      const validated = recurringTransactionSchema.parse({
+        description: transaction.description,
+        amount: transaction.amount,
+        type: transaction.type,
+        frequency: transaction.frequency,
+        startDate: transaction.startDate,
+        endDate: transaction.endDate,
+        isActive: transaction.isActive,
+        categoryId: transaction.categoryId,
+        bankId: transaction.bankId,
+        subcategory: transaction.subcategory,
+      });
+
       const { data, error } = await supabase
         .from('recurring_transactions')
         .update({
-          description: transaction.description,
-          amount: transaction.amount,
-          type: transaction.type,
-          category_id: transaction.categoryId,
-          subcategory: transaction.subcategory,
-          bank_id: transaction.bankId,
-          frequency: transaction.frequency,
-          start_date: transaction.startDate.toISOString(),
-          end_date: transaction.endDate?.toISOString(),
-          is_active: transaction.isActive,
+          description: validated.description,
+          amount: validated.amount,
+          type: validated.type,
+          category_id: validated.categoryId,
+          subcategory: validated.subcategory,
+          bank_id: validated.bankId,
+          frequency: validated.frequency,
+          start_date: validated.startDate.toISOString(),
+          end_date: validated.endDate?.toISOString(),
+          is_active: validated.isActive,
           last_generated: transaction.lastGenerated?.toISOString(),
         })
         .eq('id', id)

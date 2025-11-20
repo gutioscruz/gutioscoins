@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loan } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { loanSchema } from '@/lib/validations';
 
 export const useLoans = () => {
   const queryClient = useQueryClient();
@@ -52,21 +53,36 @@ export const useLoans = () => {
     mutationFn: async (loan: Omit<Loan, 'id' | 'payments' | 'totalPaid' | 'totalInterest'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Validate input (partial validation for loan creation)
+      const validated = loanSchema.parse({
+        name: loan.name,
+        description: loan.description,
+        principal: loan.principal,
+        interestRate: loan.interestRate,
+        installments: loan.installments,
+        paymentFrequency: loan.paymentFrequency,
+        startDate: loan.startDate,
+        status: loan.status,
+        totalInterest: 0,
+        totalPaid: 0,
+        bankId: loan.bankId,
+      });
+
       const { data, error } = await supabase
         .from('loans')
         .insert({
           user_id: user.id,
-          name: loan.name,
-          description: loan.description,
-          principal: loan.principal,
-          interest_rate: loan.interestRate,
-          installments: loan.installments,
-          payment_frequency: loan.paymentFrequency,
-          start_date: loan.startDate.toISOString(),
-          status: loan.status,
-          bank_id: loan.bankId,
-          total_interest: 0,
-          total_paid: 0,
+          name: validated.name,
+          description: validated.description,
+          principal: validated.principal,
+          interest_rate: validated.interestRate,
+          installments: validated.installments,
+          payment_frequency: validated.paymentFrequency,
+          start_date: validated.startDate.toISOString(),
+          status: validated.status,
+          bank_id: validated.bankId,
+          total_interest: validated.totalInterest,
+          total_paid: validated.totalPaid,
         })
         .select()
         .single();
