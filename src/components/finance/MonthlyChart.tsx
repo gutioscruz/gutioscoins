@@ -1,20 +1,22 @@
 import { Card } from "@/components/ui/card";
-import { Transaction } from "@/types/finance";
+import { Transaction, Category } from "@/types/finance";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface MonthlyChartProps {
   transactions: Transaction[];
+  categories: Category[];
 }
 
-export const MonthlyChart = ({ transactions }: MonthlyChartProps) => {
+export const MonthlyChart = ({ transactions, categories }: MonthlyChartProps) => {
   const expensesByCategory = transactions
     .filter((t) => t.type === "expense")
     .reduce((acc, transaction) => {
-      const category = transaction.category;
-      if (!acc[category]) {
-        acc[category] = 0;
+      const category = categories.find(c => c.id === transaction.categoryId);
+      const categoryName = category?.name || "Outros";
+      if (!acc[categoryName]) {
+        acc[categoryName] = 0;
       }
-      acc[category] += transaction.amount;
+      acc[categoryName] += transaction.amount;
       return acc;
     }, {} as Record<string, number>);
 
