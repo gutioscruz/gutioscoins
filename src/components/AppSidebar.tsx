@@ -54,16 +54,18 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     tooltip={collapsed ? item.title : undefined}
-                    className="h-11"
+                    className="h-11 px-3"
                   >
                     <NavLink 
                       to={item.url} 
                       end={item.url === "/"}
-                      className="flex items-center gap-3 px-3 py-2 text-base font-medium transition-colors"
+                      className="flex items-center text-base font-medium transition-colors w-full"
                       title={item.title}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{item.title}</span>
+                      <span className={`ml-3 truncate transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                        {item.title}
+                      </span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -76,32 +78,36 @@ export function AppSidebar() {
       <SidebarFooter className="p-2 space-y-1">
         <Button
           variant="ghost"
-          size={collapsed ? "icon" : "default"}
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-full justify-start h-11"
+          className="w-full justify-start h-11 px-3"
           title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
         >
           {theme === "dark" ? (
             <>
               <Sun className="h-5 w-5 shrink-0" />
-              {!collapsed && <span className="ml-3">Modo Claro</span>}
+              <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                Modo Claro
+              </span>
             </>
           ) : (
             <>
               <Moon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span className="ml-3">Modo Escuro</span>}
+              <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                Modo Escuro
+              </span>
             </>
           )}
         </Button>
         <Button
           variant="ghost"
-          size={collapsed ? "icon" : "default"}
           onClick={toggleSidebar}
-          className="w-full justify-start h-11"
+          className="w-full justify-start h-11 px-3"
           title="Painel Lateral"
         >
           <PanelLeft className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="ml-3">Painel Lateral</span>}
+          <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+            Painel Lateral
+          </span>
         </Button>
         <div className="w-full">
           <UserMenu collapsed={collapsed} />
