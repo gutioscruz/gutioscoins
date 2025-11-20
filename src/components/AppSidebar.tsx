@@ -68,7 +68,9 @@ export function AppSidebar() {
                       className="flex items-center text-base font-medium transition-colors w-full"
                       title={item.title}
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
+                      <item.icon className={`shrink-0 transition-all duration-300 ${
+                        collapsed ? 'h-4 w-4' : 'h-5 w-5'
+                      }`} />
                       <span className={`ml-3 truncate transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
                         {item.title}
                       </span>
@@ -90,14 +92,18 @@ export function AppSidebar() {
         >
           {theme === "dark" ? (
             <>
-              <Sun className="h-5 w-5 shrink-0" />
+              <Sun className={`shrink-0 transition-all duration-300 ${
+                collapsed ? 'h-4 w-4' : 'h-5 w-5'
+              }`} />
               <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
                 Modo Claro
               </span>
             </>
           ) : (
             <>
-              <Moon className="h-5 w-5 shrink-0" />
+              <Moon className={`shrink-0 transition-all duration-300 ${
+                collapsed ? 'h-4 w-4' : 'h-5 w-5'
+              }`} />
               <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
                 Modo Escuro
               </span>
@@ -110,7 +116,9 @@ export function AppSidebar() {
           className="w-full justify-start h-11 px-3"
           title="Painel Lateral"
         >
-          <PanelLeft className="h-5 w-5 shrink-0" />
+          <PanelLeft className={`shrink-0 transition-all duration-300 ${
+            collapsed ? 'h-4 w-4' : 'h-5 w-5'
+          }`} />
           <span className={`ml-3 transition-all duration-300 ${collapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
             Painel Lateral
           </span>

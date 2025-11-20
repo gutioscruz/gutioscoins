@@ -33,17 +33,19 @@ export const UserMenu = ({ collapsed = false }: { collapsed?: boolean }) => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className={`relative h-10 hover:bg-accent ${
+          className={`relative h-10 hover:bg-accent transition-all duration-300 ${
             collapsed ? 'w-10 rounded-full p-0' : 'w-full justify-start px-2'
           }`}
         >
-          <Avatar className="h-8 w-8">
+          <Avatar className={`transition-all duration-300 ${
+            collapsed ? 'h-7 w-7' : 'h-8 w-8'
+          }`}>
             <AvatarFallback className="bg-primary text-primary-foreground">
               {getInitials()}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
-            <div className="flex flex-col items-start flex-1 min-w-0 ml-2">
+            <div className="flex flex-col items-start flex-1 min-w-0 ml-2 transition-all duration-300">
               <span className="text-sm font-medium truncate">
                 {user.user_metadata?.full_name || 'Usuário'}
               </span>
