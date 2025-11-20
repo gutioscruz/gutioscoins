@@ -28,7 +28,7 @@ const items = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const { theme, setTheme } = useTheme();
   const collapsed = state === "collapsed";
 
@@ -86,16 +86,15 @@ export function AppSidebar() {
             </>
           )}
         </Button>
-        <SidebarTrigger asChild>
-          <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "default"}
-            className="w-full justify-start h-11"
-          >
-            <PanelLeft className="h-5 w-5 shrink-0" />
-            {!collapsed && <span className="ml-3">Painel Lateral</span>}
-          </Button>
-        </SidebarTrigger>
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          onClick={toggleSidebar}
+          className="w-full justify-start h-11"
+        >
+          <PanelLeft className="h-5 w-5 shrink-0" />
+          {!collapsed && <span className="ml-3">Painel Lateral</span>}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
