@@ -1,16 +1,18 @@
-import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3 } from "lucide-react";
+import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useTheme } from "@/components/theme-provider";
+import { Button } from "@/components/ui/button";
 
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const items = [
@@ -25,21 +27,25 @@ const items = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const { theme, setTheme } = useTheme();
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1 p-2">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
-                    <NavLink to={item.url} end>
-                      <item.icon />
-                      <span>{item.title}</span>
+                  <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined} className="h-11">
+                    <NavLink 
+                      to={item.url} 
+                      end={item.url === "/"}
+                      className="flex items-center gap-3 px-3 py-2 text-base font-medium"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -48,6 +54,27 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      <SidebarFooter className="p-2">
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="w-full justify-start h-11"
+        >
+          {theme === "dark" ? (
+            <>
+              <Sun className="h-5 w-5 shrink-0" />
+              {!collapsed && <span className="ml-3">Modo Claro</span>}
+            </>
+          ) : (
+            <>
+              <Moon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span className="ml-3">Modo Escuro</span>}
+            </>
+          )}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
