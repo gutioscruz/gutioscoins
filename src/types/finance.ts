@@ -2,6 +2,8 @@ export type TransactionType = "income" | "expense";
 export type BankType = "checking" | "savings" | "credit";
 export type InvestmentType = "stocks" | "funds" | "crypto" | "fixed-income" | "other";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+export type GoalType = "savings" | "debt-payment" | "expense-reduction" | "investment" | "emergency-fund";
+export type GoalStatus = "active" | "completed" | "paused" | "failed";
 
 export interface Category {
   id: string;
@@ -41,6 +43,28 @@ export interface BudgetCategory {
   categoryId: string;
   estimatedAmount: number;
   actualAmount: number;
+}
+
+export interface FinancialGoal {
+  id: string;
+  name: string;
+  description: string;
+  type: GoalType;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: Date;
+  status: GoalStatus;
+  createdAt: Date;
+  categoryId?: string;
+}
+
+export interface Alert {
+  id: string;
+  type: "warning" | "success" | "info";
+  title: string;
+  message: string;
+  createdAt: Date;
+  read: boolean;
 }
 
 export interface Transaction {

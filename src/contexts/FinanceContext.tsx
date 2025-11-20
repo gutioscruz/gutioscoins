@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
+import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, FinancialGoal, Alert, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -7,6 +7,8 @@ interface FinanceContextType {
   categories: Category[];
   banks: Bank[];
   investments: Investment[];
+  goals: FinancialGoal[];
+  alerts: Alert[];
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
   addCategory: (category: Omit<Category, "id">) => void;
   updateCategory: (id: string, category: Omit<Category, "id">) => void;
@@ -26,6 +28,12 @@ interface FinanceContextType {
   updateRecurringTransaction: (id: string, transaction: Omit<RecurringTransaction, "id">) => void;
   deleteRecurringTransaction: (id: string) => void;
   toggleRecurringTransaction: (id: string) => void;
+  addGoal: (goal: Omit<FinancialGoal, "id" | "createdAt">) => void;
+  updateGoal: (id: string, goal: Omit<FinancialGoal, "id" | "createdAt">) => void;
+  deleteGoal: (id: string) => void;
+  updateGoalProgress: (id: string, amount: number) => void;
+  markAlertAsRead: (id: string) => void;
+  clearAllAlerts: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -94,6 +102,48 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
   const [investments, setInvestments] = useState<Investment[]>([
     { id: "i1", name: "Tesouro Selic", type: "fixed-income", amount: 15000, profitability: 12.5, color: "#10b981" },
     { id: "i2", name: "Ações ITSA4", type: "stocks", amount: 8500, profitability: 8.2, color: "#3b82f6" },
+  ]);
+  const [goals, setGoals] = useState<FinancialGoal[]>([
+    {
+      id: "g1",
+      name: "Reserva de Emergência",
+      description: "6 meses de despesas",
+      type: "emergency-fund",
+      targetAmount: 30000,
+      currentAmount: 12000,
+      deadline: new Date(2026, 11, 31),
+      status: "active",
+      createdAt: new Date(2025, 0, 1),
+    },
+    {
+      id: "g2",
+      name: "Viagem para Europa",
+      description: "Férias de verão",
+      type: "savings",
+      targetAmount: 15000,
+      currentAmount: 5000,
+      deadline: new Date(2026, 5, 30),
+      status: "active",
+      createdAt: new Date(2025, 0, 15),
+    },
+  ]);
+  const [alerts, setAlerts] = useState<Alert[]>([
+    {
+      id: "a1",
+      type: "warning",
+      title: "Gastos acima da média",
+      message: "Seus gastos com Alimentação estão 25% acima da média dos últimos 3 meses",
+      createdAt: new Date(),
+      read: false,
+    },
+    {
+      id: "a2",
+      type: "success",
+      title: "Meta atingida!",
+      message: "Você atingiu 40% da sua meta 'Reserva de Emergência'. Continue assim!",
+      createdAt: new Date(),
+      read: false,
+    },
   ]);
 
   // Gerar transações recorrentes automaticamente
@@ -297,6 +347,57 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     ));
   };
 
+  const addGoal = (goal: Omit<FinancialGoal, "id" | "createdAt">) => {
+    const newGoal: FinancialGoal = {
+      ...goal,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    setGoals([...goals, newGoal]);
+  };
+
+  const updateGoal = (id: string, goal: Omit<FinancialGoal, "id" | "createdAt">) => {
+    setGoals(goals.map(g => {
+      if (g.id === id) {
+        const updated = { ...goal, id, createdAt: g.createdAt };
+        // Check if goal was just completed
+        if (updated.currentAmount >= updated.targetAmount && g.status === "active") {
+          updated.status = "completed";
+          // Add success alert
+          const newAlert: Alert = {
+            id: `alert-${Date.now()}`,
+            type: "success",
+            title: "Meta Concluída! 🎉",
+            message: `Parabéns! Você atingiu a meta "${updated.name}"!`,
+            createdAt: new Date(),
+            read: false,
+          };
+          setAlerts(prev => [newAlert, ...prev]);
+        }
+        return updated;
+      }
+      return g;
+    }));
+  };
+
+  const deleteGoal = (id: string) => {
+    setGoals(goals.filter(g => g.id !== id));
+  };
+
+  const updateGoalProgress = (id: string, amount: number) => {
+    setGoals(goals.map(g => 
+      g.id === id ? { ...g, currentAmount: amount } : g
+    ));
+  };
+
+  const markAlertAsRead = (id: string) => {
+    setAlerts(alerts.map(a => a.id === id ? { ...a, read: true } : a));
+  };
+
+  const clearAllAlerts = () => {
+    setAlerts([]);
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -305,6 +406,8 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
         categories,
         banks,
         investments,
+        goals,
+        alerts,
         addTransaction,
         addCategory,
         updateCategory,
@@ -324,6 +427,12 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
         updateRecurringTransaction,
         deleteRecurringTransaction,
         toggleRecurringTransaction,
+        addGoal,
+        updateGoal,
+        deleteGoal,
+        updateGoalProgress,
+        markAlertAsRead,
+        clearAllAlerts,
       }}
     >
       {children}
