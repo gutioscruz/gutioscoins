@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Banks from "./pages/Banks";
+import Budget from "./pages/Budget";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
                 <Route path="/" element={<Transactions />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/banks" element={<Banks />} />
+                <Route path="/budget" element={<Budget />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

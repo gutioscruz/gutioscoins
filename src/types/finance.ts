@@ -1,11 +1,20 @@
 export type TransactionType = "income" | "expense";
 export type BankType = "checking" | "savings" | "credit";
+export type InvestmentType = "stocks" | "funds" | "crypto" | "fixed-income" | "other";
 
 export interface Category {
   id: string;
   name: string;
   type: TransactionType;
   subcategories: string[];
+}
+
+export interface Card {
+  id: string;
+  name: string;
+  limit: number;
+  used: number;
+  color: string;
 }
 
 export interface Bank {
@@ -15,6 +24,22 @@ export interface Bank {
   balance?: number;
   limit?: number;
   color: string;
+  cards?: Card[];
+}
+
+export interface Investment {
+  id: string;
+  name: string;
+  type: InvestmentType;
+  amount: number;
+  profitability?: number;
+  color: string;
+}
+
+export interface BudgetCategory {
+  categoryId: string;
+  estimatedAmount: number;
+  actualAmount: number;
 }
 
 export interface Transaction {
