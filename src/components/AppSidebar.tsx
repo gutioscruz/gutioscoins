@@ -1,4 +1,4 @@
-import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown } from "lucide-react";
+import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown, PanelLeft } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,16 @@ export function AppSidebar() {
             </>
           )}
         </Button>
-        <SidebarTrigger className="w-full h-11" />
+        <SidebarTrigger asChild>
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "default"}
+            className="w-full justify-start h-11"
+          >
+            <PanelLeft className="h-5 w-5 shrink-0" />
+            {!collapsed && <span className="ml-3">Painel Lateral</span>}
+          </Button>
+        </SidebarTrigger>
       </SidebarFooter>
     </Sidebar>
   );
