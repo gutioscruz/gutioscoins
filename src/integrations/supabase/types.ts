@@ -467,6 +467,10 @@ export type Database = {
           date: string
           description: string
           id: string
+          installment_count: number | null
+          installment_number: number | null
+          is_installment: boolean
+          parent_transaction_id: string | null
           recurring_transaction_id: string | null
           subcategory: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -481,6 +485,10 @@ export type Database = {
           date?: string
           description: string
           id?: string
+          installment_count?: number | null
+          installment_number?: number | null
+          is_installment?: boolean
+          parent_transaction_id?: string | null
           recurring_transaction_id?: string | null
           subcategory?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -495,6 +503,10 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          installment_count?: number | null
+          installment_number?: number | null
+          is_installment?: boolean
+          parent_transaction_id?: string | null
           recurring_transaction_id?: string | null
           subcategory?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
@@ -514,6 +526,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]

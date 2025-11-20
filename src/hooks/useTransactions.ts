@@ -31,6 +31,10 @@ export const useTransactions = () => {
         bankId: t.bank_id,
         date: new Date(t.date),
         recurringTransactionId: t.recurring_transaction_id || undefined,
+        isInstallment: t.is_installment || false,
+        installmentCount: t.installment_count || undefined,
+        installmentNumber: t.installment_number || 1,
+        parentTransactionId: t.parent_transaction_id || undefined,
       })) as Transaction[];
     },
     enabled: !!user,
@@ -49,8 +53,64 @@ export const useTransactions = () => {
         categoryId: transaction.categoryId,
         bankId: transaction.bankId,
         subcategory: transaction.subcategory,
+        isInstallment: transaction.isInstallment,
+        installmentCount: transaction.installmentCount,
+        installmentNumber: transaction.installmentNumber,
+        parentTransactionId: transaction.parentTransactionId,
       });
 
+      // If it's an installment, create all installments
+      if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1) {
+        const installments = [];
+        const baseDate = new Date(validated.date);
+        
+        for (let i = 1; i <= validated.installmentCount; i++) {
+          const installmentDate = new Date(baseDate);
+          installmentDate.setMonth(baseDate.getMonth() + (i - 1));
+          
+          installments.push({
+            user_id: user.id,
+            description: `${validated.description} (${i}/${validated.installmentCount})`,
+            amount: validated.amount,
+            type: validated.type,
+            category_id: validated.categoryId,
+            subcategory: validated.subcategory,
+            bank_id: validated.bankId,
+            date: installmentDate.toISOString(),
+            is_installment: true,
+            installment_count: validated.installmentCount,
+            installment_number: i,
+            parent_transaction_id: i === 1 ? null : undefined, // Will be updated after first insert
+          });
+        }
+
+        // Insert first installment
+        const { data: firstInstallment, error: firstError } = await supabase
+          .from('transactions')
+          .insert(installments[0])
+          .select()
+          .single();
+
+        if (firstError) throw firstError;
+
+        // Update remaining installments with parent_transaction_id
+        const remainingInstallments = installments.slice(1).map(inst => ({
+          ...inst,
+          parent_transaction_id: firstInstallment.id,
+        }));
+
+        if (remainingInstallments.length > 0) {
+          const { error: remainingError } = await supabase
+            .from('transactions')
+            .insert(remainingInstallments);
+
+          if (remainingError) throw remainingError;
+        }
+
+        return firstInstallment;
+      }
+
+      // Regular transaction
       const { data, error } = await supabase
         .from('transactions')
         .insert({
@@ -63,6 +123,10 @@ export const useTransactions = () => {
           bank_id: validated.bankId,
           date: validated.date.toISOString(),
           recurring_transaction_id: transaction.recurringTransactionId,
+          is_installment: validated.isInstallment,
+          installment_count: validated.installmentCount,
+          installment_number: validated.installmentNumber,
+          parent_transaction_id: validated.parentTransactionId,
         })
         .select()
         .single();

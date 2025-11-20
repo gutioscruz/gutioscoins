@@ -18,7 +18,24 @@ export const transactionSchema = z.object({
   categoryId: uuidSchema,
   bankId: uuidSchema,
   subcategory: z.string().trim().max(100, 'Subcategoria muito longa').optional(),
-});
+  isInstallment: z.boolean().default(false),
+  installmentCount: z.number().int().min(2).max(100).optional(),
+  installmentNumber: z.number().int().min(1).default(1),
+  parentTransactionId: uuidSchema.optional(),
+}).refine(
+  (data) => {
+    if (data.isInstallment && !data.installmentCount) {
+      return false;
+    }
+    if (!data.isInstallment && data.installmentCount) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Transações parceladas devem ter quantidade de parcelas definida",
+  }
+);
 
 export type TransactionInput = z.infer<typeof transactionSchema>;
 
