@@ -5,8 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { FinanceProvider } from "@/contexts/FinanceContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
+import { UserMenu } from "@/components/UserMenu";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import RecurringTransactions from "./pages/RecurringTransactions";
@@ -15,6 +18,7 @@ import Banks from "./pages/Banks";
 import Budget from "./pages/Budget";
 import Goals from "./pages/Goals";
 import Loans from "./pages/Loans";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,33 +30,45 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <FinanceProvider>
-            <SidebarProvider>
-            <div className="flex min-h-screen w-full">
-            <AppSidebar />
-            <SidebarInset className="flex-1">
-              <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
-                <SidebarTrigger />
-              </header>
-              <Routes>
-                <Route path="/" element={<Transactions />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/recurring" element={<RecurringTransactions />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/banks" element={<Banks />} />
-                <Route path="/budget" element={<Budget />} />
-                <Route path="/goals" element={<Goals />} />
-                <Route path="/loans" element={<Loans />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
-        </FinanceProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </ThemeProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <FinanceProvider>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar />
+                          <SidebarInset className="flex-1">
+                            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 justify-between">
+                              <SidebarTrigger />
+                              <UserMenu />
+                            </header>
+                            <Routes>
+                              <Route path="/" element={<Transactions />} />
+                              <Route path="/dashboard" element={<Dashboard />} />
+                              <Route path="/recurring" element={<RecurringTransactions />} />
+                              <Route path="/categories" element={<Categories />} />
+                              <Route path="/banks" element={<Banks />} />
+                              <Route path="/budget" element={<Budget />} />
+                              <Route path="/goals" element={<Goals />} />
+                              <Route path="/loans" element={<Loans />} />
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </SidebarInset>
+                        </div>
+                      </SidebarProvider>
+                    </FinanceProvider>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
