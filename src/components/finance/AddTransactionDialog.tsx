@@ -38,6 +38,8 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
   const [subcategory, setSubcategory] = useState("");
   const [bankId, setBankId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState("");
 
   const filteredCategories = categories.filter(c => c.type === type);
   const selectedCategory = categories.find(c => c.id === categoryId);
@@ -58,6 +60,14 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
         return;
       }
 
+      // Validate installment count if installment is selected
+      const numericInstallmentCount = isInstallment && installmentCount ? parseInt(installmentCount) : undefined;
+      
+      if (isInstallment && (!numericInstallmentCount || numericInstallmentCount < 2)) {
+        toast.error("Parcelas devem ser no mínimo 2");
+        return;
+      }
+
       // Validate the transaction data
       const validated = transactionSchema.parse({
         description,
@@ -67,6 +77,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
         subcategory: subcategory || undefined,
         bankId,
         date: new Date(date),
+        isInstallment,
+        installmentCount: numericInstallmentCount,
+        installmentNumber: 1,
       });
 
       const transaction: Omit<Transaction, "id"> = {
@@ -77,13 +90,21 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
         subcategory: validated.subcategory,
         bankId: validated.bankId,
         date: validated.date,
+        isInstallment: validated.isInstallment,
+        installmentCount: validated.installmentCount,
+        installmentNumber: validated.installmentNumber,
+        parentTransactionId: validated.parentTransactionId,
       };
 
       onAddTransaction(transaction);
       
-      toast.success(
-        type === "income" ? "Receita adicionada com sucesso!" : "Despesa adicionada com sucesso!"
-      );
+      const successMessage = isInstallment && numericInstallmentCount 
+        ? `Compra parcelada em ${numericInstallmentCount}x adicionada! Todas as parcelas foram criadas.`
+        : type === "income" 
+          ? "Receita adicionada com sucesso!" 
+          : "Despesa adicionada com sucesso!";
+      
+      toast.success(successMessage);
 
       // Reset form
       setDescription("");
@@ -92,6 +113,8 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
       setSubcategory("");
       setBankId("");
       setDate(new Date().toISOString().split("T")[0]);
+      setIsInstallment(false);
+      setInstallmentCount("");
       setOpen(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -225,6 +248,45 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="paymentType">Tipo de Pagamento</Label>
+            <Select 
+              value={isInstallment ? "installment" : "single"} 
+              onValueChange={(value) => {
+                setIsInstallment(value === "installment");
+                if (value === "single") {
+                  setInstallmentCount("");
+                }
+              }}
+            >
+              <SelectTrigger id="paymentType">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">À vista</SelectItem>
+                <SelectItem value="installment">Parcelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isInstallment && (
+            <div className="space-y-2">
+              <Label htmlFor="installmentCount">Número de Parcelas</Label>
+              <Input
+                id="installmentCount"
+                type="number"
+                min="2"
+                max="100"
+                placeholder="Ex: 12"
+                value={installmentCount}
+                onChange={(e) => setInstallmentCount(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Valor por parcela: R$ {installmentCount && amount ? (parseFloat(amount) / parseInt(installmentCount)).toFixed(2) : "0,00"}
+              </p>
+            </div>
+          )}
 
           <Button type="submit" className="w-full">
             Adicionar Transação

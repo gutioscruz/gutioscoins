@@ -107,6 +107,10 @@ export interface Transaction {
   bankId: string;
   date: Date;
   recurringTransactionId?: string;
+  isInstallment: boolean;
+  installmentCount?: number;
+  installmentNumber: number;
+  parentTransactionId?: string;
 }
 
 export interface RecurringTransaction {
