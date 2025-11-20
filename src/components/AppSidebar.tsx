@@ -1,4 +1,4 @@
-import { Home, Tag, Building2, PiggyBank } from "lucide-react";
+import { Home, Tag, Building2, PiggyBank, Repeat } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 import {
@@ -15,6 +15,7 @@ import {
 
 const items = [
   { title: "Transações", url: "/", icon: Home },
+  { title: "Recorrentes", url: "/recurring", icon: Repeat },
   { title: "Categorias", url: "/categories", icon: Tag },
   { title: "Patrimônio", url: "/banks", icon: Building2 },
   { title: "Orçamento", url: "/budget", icon: PiggyBank },
