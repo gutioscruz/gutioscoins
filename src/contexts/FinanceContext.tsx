@@ -7,6 +7,7 @@ import { useGoals } from "@/hooks/useGoals";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useLoans } from "@/hooks/useLoans";
 import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
+import { useInitializeUserData } from "@/hooks/useInitializeUserData";
 import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, FinancialGoal, Alert, Loan } from "@/types/finance";
 
 interface FinanceContextType {
@@ -92,6 +93,9 @@ interface FinanceProviderProps {
 }
 
 export const FinanceProvider = ({ children }: FinanceProviderProps) => {
+  // Initialize user data (categories for new users)
+  useInitializeUserData();
+  
   // Use hooks
   const transactionsHook = useTransactions();
   const categoriesHook = useCategories();

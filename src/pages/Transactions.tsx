@@ -11,7 +11,10 @@ const Transactions = () => {
     transactions,
     categories,
     banks,
-    addTransaction
+    addTransaction,
+    isLoadingTransactions,
+    isLoadingCategories,
+    isLoadingBanks
   } = useFinance();
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
@@ -25,6 +28,17 @@ const Transactions = () => {
   const totalIncome = filteredTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = filteredTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpense;
+  
+  const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingBanks;
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
   return <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
