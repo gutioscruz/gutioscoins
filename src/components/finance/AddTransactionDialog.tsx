@@ -18,28 +18,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Transaction, TransactionType, incomeCategories, expenseCategories } from "@/types/finance";
+import { Transaction, TransactionType, Category, Bank } from "@/types/finance";
 import { toast } from "sonner";
 
 interface AddTransactionDialogProps {
   onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
+  categories: Category[];
+  banks: Bank[];
 }
 
-export const AddTransactionDialog = ({ onAddTransaction }: AddTransactionDialogProps) => {
+export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: AddTransactionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>("expense");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [bankId, setBankId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
-  const categories = type === "income" ? incomeCategories : expenseCategories;
+  const filteredCategories = categories.filter(c => c.type === type);
+  const selectedCategory = categories.find(c => c.id === categoryId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!description || !amount || !category) {
-      toast.error("Preencha todos os campos");
+    if (!description || !amount || !categoryId || !bankId) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
@@ -47,7 +52,9 @@ export const AddTransactionDialog = ({ onAddTransaction }: AddTransactionDialogP
       description,
       amount: parseFloat(amount),
       type,
-      category,
+      categoryId,
+      subcategory: subcategory || undefined,
+      bankId,
       date: new Date(date),
     };
 
@@ -60,7 +67,9 @@ export const AddTransactionDialog = ({ onAddTransaction }: AddTransactionDialogP
     // Reset form
     setDescription("");
     setAmount("");
-    setCategory("");
+    setCategoryId("");
+    setSubcategory("");
+    setBankId("");
     setDate(new Date().toISOString().split("T")[0]);
     setOpen(false);
   };
@@ -85,7 +94,8 @@ export const AddTransactionDialog = ({ onAddTransaction }: AddTransactionDialogP
             <Label htmlFor="type">Tipo</Label>
             <Select value={type} onValueChange={(value: TransactionType) => {
               setType(value);
-              setCategory("");
+              setCategoryId("");
+              setSubcategory("");
             }}>
               <SelectTrigger id="type">
                 <SelectValue />
@@ -121,14 +131,57 @@ export const AddTransactionDialog = ({ onAddTransaction }: AddTransactionDialogP
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={categoryId} onValueChange={(value) => {
+              setCategoryId(value);
+              setSubcategory("");
+            }}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                {filteredCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedCategory && selectedCategory.subcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">Subcategoria (Opcional)</Label>
+              <Select value={subcategory} onValueChange={setSubcategory}>
+                <SelectTrigger id="subcategory">
+                  <SelectValue placeholder="Selecione uma subcategoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCategory.subcategories.map((sub) => (
+                    <SelectItem key={sub} value={sub}>
+                      {sub}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="bank">Banco/Cartão</Label>
+            <Select value={bankId} onValueChange={setBankId}>
+              <SelectTrigger id="bank">
+                <SelectValue placeholder="Selecione um banco" />
+              </SelectTrigger>
+              <SelectContent>
+                {banks.map((bank) => (
+                  <SelectItem key={bank.id} value={bank.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: bank.color }}
+                      />
+                      {bank.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
