@@ -151,7 +151,6 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
       read: false,
     },
   ]);
-
   const [loans, setLoans] = useState<Loan[]>([]);
 
   // Gerar transações recorrentes automaticamente
@@ -413,7 +412,6 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     paymentFrequency: string,
     startDate: Date
   ): LoanPayment[] => {
-    const monthlyRate = interestRate / 100 / 12;
     const periodsPerYear = paymentFrequency === "monthly" ? 12 : paymentFrequency === "biweekly" ? 26 : 52;
     const periodRate = (interestRate / 100) / periodsPerYear;
     
