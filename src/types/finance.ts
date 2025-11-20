@@ -4,6 +4,8 @@ export type InvestmentType = "stocks" | "funds" | "crypto" | "fixed-income" | "o
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 export type GoalType = "savings" | "debt-payment" | "expense-reduction" | "investment" | "emergency-fund";
 export type GoalStatus = "active" | "completed" | "paused" | "failed";
+export type LoanStatus = "active" | "paid" | "overdue";
+export type PaymentFrequency = "monthly" | "biweekly" | "weekly";
 
 export interface Category {
   id: string;
@@ -65,6 +67,34 @@ export interface Alert {
   message: string;
   createdAt: Date;
   read: boolean;
+}
+
+export interface LoanPayment {
+  id: string;
+  installmentNumber: number;
+  dueDate: Date;
+  amount: number;
+  principal: number;
+  interest: number;
+  paid: boolean;
+  paidDate?: Date;
+  transactionId?: string;
+}
+
+export interface Loan {
+  id: string;
+  name: string;
+  description: string;
+  principal: number;
+  interestRate: number;
+  installments: number;
+  paymentFrequency: PaymentFrequency;
+  startDate: Date;
+  status: LoanStatus;
+  bankId?: string;
+  payments: LoanPayment[];
+  totalPaid: number;
+  totalInterest: number;
 }
 
 export interface Transaction {

@@ -1,4 +1,4 @@
-import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins } from "lucide-react";
+import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ const items = [
   { title: "Patrimônio", url: "/banks", icon: Building2 },
   { title: "Orçamento", url: "/budget", icon: PiggyBank },
   { title: "Metas", url: "/goals", icon: Target },
+  { title: "Empréstimos", url: "/loans", icon: TrendingDown },
 ];
 
 export function AppSidebar() {

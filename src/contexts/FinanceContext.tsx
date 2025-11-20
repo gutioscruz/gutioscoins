@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, FinancialGoal, Alert, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
+import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, FinancialGoal, Alert, Loan, LoanPayment, defaultIncomeCategories, defaultExpenseCategories } from "@/types/finance";
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -9,6 +9,7 @@ interface FinanceContextType {
   investments: Investment[];
   goals: FinancialGoal[];
   alerts: Alert[];
+  loans: Loan[];
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
   addCategory: (category: Omit<Category, "id">) => void;
   updateCategory: (id: string, category: Omit<Category, "id">) => void;
@@ -34,6 +35,11 @@ interface FinanceContextType {
   updateGoalProgress: (id: string, amount: number) => void;
   markAlertAsRead: (id: string) => void;
   clearAllAlerts: () => void;
+  addLoan: (loan: Omit<Loan, "id" | "payments" | "totalPaid" | "totalInterest">) => void;
+  updateLoan: (id: string, loan: Partial<Omit<Loan, "id">>) => void;
+  deleteLoan: (id: string) => void;
+  payLoanInstallment: (loanId: string, installmentNumber: number, paidDate?: Date) => void;
+  payLoanInstallmentsAhead: (loanId: string, numberOfInstallments: number) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -145,6 +151,8 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
       read: false,
     },
   ]);
+
+  const [loans, setLoans] = useState<Loan[]>([]);
 
   // Gerar transações recorrentes automaticamente
   useEffect(() => {
@@ -398,6 +406,132 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     setAlerts([]);
   };
 
+  const calculateLoanPayments = (
+    principal: number,
+    interestRate: number,
+    installments: number,
+    paymentFrequency: string,
+    startDate: Date
+  ): LoanPayment[] => {
+    const monthlyRate = interestRate / 100 / 12;
+    const periodsPerYear = paymentFrequency === "monthly" ? 12 : paymentFrequency === "biweekly" ? 26 : 52;
+    const periodRate = (interestRate / 100) / periodsPerYear;
+    
+    const installmentAmount = principal * (periodRate * Math.pow(1 + periodRate, installments)) / (Math.pow(1 + periodRate, installments) - 1);
+    
+    const payments: LoanPayment[] = [];
+    let remainingPrincipal = principal;
+    
+    for (let i = 1; i <= installments; i++) {
+      const interestPayment = remainingPrincipal * periodRate;
+      const principalPayment = installmentAmount - interestPayment;
+      
+      const dueDate = new Date(startDate);
+      if (paymentFrequency === "monthly") {
+        dueDate.setMonth(dueDate.getMonth() + i);
+      } else if (paymentFrequency === "biweekly") {
+        dueDate.setDate(dueDate.getDate() + (i * 14));
+      } else {
+        dueDate.setDate(dueDate.getDate() + (i * 7));
+      }
+      
+      payments.push({
+        id: `payment-${i}`,
+        installmentNumber: i,
+        dueDate,
+        amount: installmentAmount,
+        principal: principalPayment,
+        interest: interestPayment,
+        paid: false,
+      });
+      
+      remainingPrincipal -= principalPayment;
+    }
+    
+    return payments;
+  };
+
+  const addLoan = (loan: Omit<Loan, "id" | "payments" | "totalPaid" | "totalInterest">) => {
+    const payments = calculateLoanPayments(
+      loan.principal,
+      loan.interestRate,
+      loan.installments,
+      loan.paymentFrequency,
+      loan.startDate
+    );
+    
+    const totalInterest = payments.reduce((sum, p) => sum + p.interest, 0);
+    
+    const newLoan: Loan = {
+      ...loan,
+      id: Date.now().toString(),
+      payments,
+      totalPaid: 0,
+      totalInterest,
+      status: "active",
+    };
+    
+    setLoans([...loans, newLoan]);
+  };
+
+  const updateLoan = (id: string, loanUpdate: Partial<Omit<Loan, "id">>) => {
+    setLoans(loans.map(l => 
+      l.id === id ? { ...l, ...loanUpdate } : l
+    ));
+  };
+
+  const deleteLoan = (id: string) => {
+    setLoans(loans.filter(l => l.id !== id));
+  };
+
+  const payLoanInstallment = (loanId: string, installmentNumber: number, paidDate?: Date) => {
+    setLoans(loans.map(loan => {
+      if (loan.id !== loanId) return loan;
+      
+      const updatedPayments = loan.payments.map(p => 
+        p.installmentNumber === installmentNumber 
+          ? { ...p, paid: true, paidDate: paidDate || new Date() }
+          : p
+      );
+      
+      const paidPayment = updatedPayments.find(p => p.installmentNumber === installmentNumber);
+      const totalPaid = loan.totalPaid + (paidPayment?.amount || 0);
+      
+      const allPaid = updatedPayments.every(p => p.paid);
+      
+      return {
+        ...loan,
+        payments: updatedPayments,
+        totalPaid,
+        status: allPaid ? "paid" : "active",
+      };
+    }));
+  };
+
+  const payLoanInstallmentsAhead = (loanId: string, numberOfInstallments: number) => {
+    setLoans(loans.map(loan => {
+      if (loan.id !== loanId) return loan;
+      
+      const unpaidPayments = loan.payments.filter(p => !p.paid);
+      const paymentsToPay = unpaidPayments.slice(0, numberOfInstallments);
+      
+      const updatedPayments = loan.payments.map(p => {
+        const shouldPay = paymentsToPay.some(ptp => ptp.installmentNumber === p.installmentNumber);
+        return shouldPay ? { ...p, paid: true, paidDate: new Date() } : p;
+      });
+      
+      const totalPaid = loan.totalPaid + paymentsToPay.reduce((sum, p) => sum + p.amount, 0);
+      const allPaid = updatedPayments.every(p => p.paid);
+      
+      return {
+        ...loan,
+        payments: updatedPayments,
+        totalPaid,
+        status: allPaid ? "paid" : "active",
+      };
+    }));
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -408,6 +542,7 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
         investments,
         goals,
         alerts,
+        loans,
         addTransaction,
         addCategory,
         updateCategory,
@@ -433,6 +568,11 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
         updateGoalProgress,
         markAlertAsRead,
         clearAllAlerts,
+        addLoan,
+        updateLoan,
+        deleteLoan,
+        payLoanInstallment,
+        payLoanInstallmentsAhead,
       }}
     >
       {children}
