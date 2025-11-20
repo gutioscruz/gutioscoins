@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   useSidebar,
   SidebarFooter,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const items = [
@@ -66,7 +67,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-2 space-y-1">
         <Button
           variant="ghost"
           size={collapsed ? "icon" : "default"}
@@ -85,6 +86,7 @@ export function AppSidebar() {
             </>
           )}
         </Button>
+        <SidebarTrigger className="w-full h-11" />
       </SidebarFooter>
     </Sidebar>
   );
