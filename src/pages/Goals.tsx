@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Target, TrendingUp, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
-import { Header } from "@/components/finance/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -153,7 +152,6 @@ const Goals = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex justify-between items-center">
           <div>
