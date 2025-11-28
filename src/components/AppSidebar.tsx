@@ -1,4 +1,4 @@
-import { Home, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown, PanelLeft } from "lucide-react";
+import { Receipt, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown, PanelLeft } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
-  { title: "Transações", url: "/", icon: Home },
+  { title: "Transações", url: "/", icon: Receipt },
   { title: "Recorrentes", url: "/recurring", icon: Repeat },
   { title: "Categorias", url: "/categories", icon: Tag },
   { title: "Patrimônio", url: "/banks", icon: Building2 },

@@ -33,6 +33,8 @@ interface FinanceContextType {
   
   // Transaction methods
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
+  deleteTransaction: (id: string) => void;
   
   // Category methods
   addCategory: (category: Omit<Category, "id">) => void;
@@ -194,6 +196,8 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     
     // Transaction methods
     addTransaction: transactionsHook.addTransaction,
+    updateTransaction: (id, transaction) => transactionsHook.updateTransaction({ id, transaction }),
+    deleteTransaction: transactionsHook.deleteTransaction,
     
     // Category methods
     addCategory: categoriesHook.addCategory,
