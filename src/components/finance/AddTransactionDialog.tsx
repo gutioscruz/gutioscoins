@@ -40,9 +40,12 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState("");
+  const [cardId, setCardId] = useState("");
 
   const filteredCategories = categories.filter(c => c.type === type);
   const selectedCategory = categories.find(c => c.id === categoryId);
+  const selectedBank = banks.find(b => b.id === bankId);
+  const hasCards = selectedBank && selectedBank.cards && selectedBank.cards.length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +118,7 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
       setDate(new Date().toISOString().split("T")[0]);
       setIsInstallment(false);
       setInstallmentCount("");
+      setCardId("");
       setOpen(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -221,38 +225,64 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="bank">Banco</Label>
+            <Select value={bankId} onValueChange={(value) => {
+              setBankId(value);
+              setCardId("");
+            }}>
+              <SelectTrigger id="bank">
+                <SelectValue placeholder="Selecione um banco" />
+              </SelectTrigger>
+              <SelectContent>
+                {banks.map((bank) => (
+                  <SelectItem key={bank.id} value={bank.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: bank.color }}
+                      />
+                      {bank.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {hasCards && (
             <div className="space-y-2">
-              <Label htmlFor="bank">Banco/Cartão</Label>
-              <Select value={bankId} onValueChange={setBankId}>
-                <SelectTrigger id="bank">
-                  <SelectValue placeholder="Selecione" />
+              <Label htmlFor="card">Cartão (Opcional)</Label>
+              <Select value={cardId} onValueChange={setCardId}>
+                <SelectTrigger id="card">
+                  <SelectValue placeholder="Selecione um cartão ou deixe em branco" />
                 </SelectTrigger>
                 <SelectContent>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.id} value={bank.id}>
+                  <SelectItem value="">Nenhum (usar conta do banco)</SelectItem>
+                  {selectedBank?.cards?.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: bank.color }}
+                          style={{ backgroundColor: card.color }}
                         />
-                        {bank.name}
+                        {card.name}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="date">Data</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">

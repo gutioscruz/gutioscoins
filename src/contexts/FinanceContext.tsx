@@ -8,6 +8,7 @@ import { useAlerts } from "@/hooks/useAlerts";
 import { useLoans } from "@/hooks/useLoans";
 import { useRecurringTransactions } from "@/hooks/useRecurringTransactions";
 import { useInitializeUserData } from "@/hooks/useInitializeUserData";
+import { useCards } from "@/hooks/useCards";
 import { Transaction, Category, Bank, Investment, Card, RecurringTransaction, FinancialGoal, Alert, Loan } from "@/types/finance";
 
 interface FinanceContextType {
@@ -107,6 +108,7 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
   const alertsHook = useAlerts();
   const loansHook = useLoans();
   const recurringHook = useRecurringTransactions();
+  const cardsHook = useCards();
 
   // Category helper methods
   const addSubcategory = (categoryId: string, subcategory: string) => {
@@ -135,19 +137,17 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     }
   };
 
-  // Card management (stored with banks)
+  // Card management (now fully implemented with Supabase)
   const addCardToBank = (bankId: string, card: Omit<Card, "id">) => {
-    // Cards are managed through the cards table via Supabase
-    // This would need a separate hook or direct Supabase call
-    console.warn('Card management not yet implemented with Supabase');
+    cardsHook.addCard({ bankId, card });
   };
 
   const updateCard = (bankId: string, cardId: string, card: Omit<Card, "id">) => {
-    console.warn('Card management not yet implemented with Supabase');
+    cardsHook.updateCard({ cardId, card });
   };
 
   const deleteCard = (bankId: string, cardId: string) => {
-    console.warn('Card management not yet implemented with Supabase');
+    cardsHook.deleteCard(cardId);
   };
 
   // Goal progress update
