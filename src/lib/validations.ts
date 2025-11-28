@@ -69,8 +69,8 @@ export type BankInput = z.infer<typeof bankSchema>;
 // Card validation
 export const cardSchema = z.object({
   name: shortText,
-  limit: positiveAmount,
-  used: z.number().min(0, 'Valor usado não pode ser negativo').max(999999999),
+  limit: z.coerce.number().positive('Limite deve ser positivo').max(999999999, 'Valor muito alto'),
+  used: z.coerce.number().min(0, 'Valor usado não pode ser negativo').max(999999999).default(0),
   color: colorHex,
 });
 

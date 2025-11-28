@@ -64,7 +64,7 @@ const Banks = () => {
   const [cardFormData, setCardFormData] = useState({
     name: "",
     limit: "",
-    used: "",
+    used: "0",
     color: "#10b981",
   });
 
@@ -115,8 +115,8 @@ const Banks = () => {
 
     const cardData = {
       name: cardFormData.name,
-      limit: parseFloat(cardFormData.limit),
-      used: parseFloat(cardFormData.used),
+      limit: Number(cardFormData.limit) || 0,
+      used: Number(cardFormData.used) || 0,
       color: cardFormData.color,
     };
 
@@ -184,7 +184,7 @@ const Banks = () => {
     setCardFormData({
       name: "",
       limit: "",
-      used: "",
+      used: "0",
       color: "#10b981",
     });
   };
