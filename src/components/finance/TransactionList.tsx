@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Transaction, Category, Bank } from "@/types/finance";
@@ -10,9 +10,11 @@ interface TransactionListProps {
   transactions: Transaction[];
   categories: Category[];
   banks: Bank[];
+  onEdit?: (transaction: Transaction) => void;
+  onDelete?: (id: string) => void;
 }
 
-export const TransactionList = ({ transactions, categories, banks }: TransactionListProps) => {
+export const TransactionList = ({ transactions, categories, banks, onEdit, onDelete }: TransactionListProps) => {
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -56,12 +58,17 @@ export const TransactionList = ({ transactions, categories, banks }: Transaction
               .map((transaction) => {
                 const category = categories.find(c => c.id === transaction.categoryId);
                 const bank = banks.find(b => b.id === transaction.bankId);
+                // Calculate the installment amount if it's an installment
+                const displayAmount = transaction.isInstallment && transaction.installmentCount 
+                  ? transaction.amount / transaction.installmentCount 
+                  : transaction.amount;
+                
                 return (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-full ${
                       transaction.type === "income" ? "bg-income-light" : "bg-expense-light"
@@ -73,7 +80,7 @@ export const TransactionList = ({ transactions, categories, banks }: Transaction
                       <ArrowDownCircle className="w-5 h-5 text-expense" />
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-foreground">{transaction.description}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>
@@ -94,16 +101,50 @@ export const TransactionList = ({ transactions, categories, banks }: Transaction
                           </div>
                         </>
                       )}
+                      {transaction.isInstallment && transaction.installmentNumber && transaction.installmentCount && (
+                        <>
+                          <span>•</span>
+                          <span className="text-xs font-medium">
+                            {transaction.installmentNumber}/{transaction.installmentCount}x
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-                <p
-                  className={`text-lg font-semibold ${
-                    transaction.type === "income" ? "text-income" : "text-expense"
-                  }`}
-                >
-                  {transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`text-lg font-semibold ${
+                      transaction.type === "income" ? "text-income" : "text-expense"
+                    }`}
+                  >
+                    {transaction.type === "income" ? "+" : "-"} {formatCurrency(displayAmount)}
+                  </p>
+                  {(onEdit || onDelete) && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => onEdit(transaction)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive"
+                          onClick={() => onDelete(transaction.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
                 );
               })

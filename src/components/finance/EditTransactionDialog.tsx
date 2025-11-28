@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,24 +21,48 @@ import { Transaction, TransactionType, Category, Bank } from "@/types/finance";
 import { toast } from "sonner";
 import { transactionSchema } from "@/lib/validations";
 import { z } from "zod";
+import { format } from "date-fns";
 
-interface AddTransactionDialogProps {
-  onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
+interface EditTransactionDialogProps {
+  transaction: Transaction | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdateTransaction: (id: string, transaction: Partial<Transaction>) => void;
   categories: Category[];
   banks: Bank[];
 }
 
-export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: AddTransactionDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const EditTransactionDialog = ({ 
+  transaction, 
+  open, 
+  onOpenChange, 
+  onUpdateTransaction, 
+  categories, 
+  banks 
+}: EditTransactionDialogProps) => {
   const [type, setType] = useState<TransactionType>("expense");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [bankId, setBankId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [isInstallment, setIsInstallment] = useState(false);
-  const [installmentCount, setInstallmentCount] = useState("");
+  const [date, setDate] = useState("");
+
+  useEffect(() => {
+    if (transaction) {
+      setType(transaction.type);
+      setDescription(transaction.description);
+      // For installments, show the installment amount
+      const displayAmount = transaction.isInstallment && transaction.installmentCount
+        ? transaction.amount / transaction.installmentCount
+        : transaction.amount;
+      setAmount(displayAmount.toString());
+      setCategoryId(transaction.categoryId);
+      setSubcategory(transaction.subcategory || "");
+      setBankId(transaction.bankId);
+      setDate(format(transaction.date, "yyyy-MM-dd"));
+    }
+  }, [transaction]);
 
   const filteredCategories = categories.filter(c => c.type === type);
   const selectedCategory = categories.find(c => c.id === categoryId);
@@ -47,42 +70,37 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!description || !amount || !categoryId || !bankId) {
+    if (!transaction || !description || !amount || !categoryId || !bankId) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
     try {
-      // Parse and validate the amount
       const numericAmount = parseFloat(amount);
       if (isNaN(numericAmount)) {
         toast.error("Valor inválido");
         return;
       }
 
-      // Validate installment count if installment is selected
-      const numericInstallmentCount = isInstallment && installmentCount ? parseInt(installmentCount) : undefined;
-      
-      if (isInstallment && (!numericInstallmentCount || numericInstallmentCount < 2)) {
-        toast.error("Parcelas devem ser no mínimo 2");
-        return;
-      }
+      // For installments, we need to update the total amount
+      const actualAmount = transaction.isInstallment && transaction.installmentCount
+        ? numericAmount * transaction.installmentCount
+        : numericAmount;
 
-      // Validate the transaction data
       const validated = transactionSchema.parse({
         description,
-        amount: numericAmount,
+        amount: actualAmount,
         type,
         categoryId,
         subcategory: subcategory || undefined,
         bankId,
-        date: new Date(date),
-        isInstallment,
-        installmentCount: numericInstallmentCount,
-        installmentNumber: 1,
+        date: new Date(date + "T00:00:00"),
+        isInstallment: transaction.isInstallment,
+        installmentCount: transaction.installmentCount,
+        installmentNumber: transaction.installmentNumber,
       });
 
-      const transaction: Omit<Transaction, "id"> = {
+      onUpdateTransaction(transaction.id, {
         description: validated.description,
         amount: validated.amount,
         type: validated.type,
@@ -90,66 +108,41 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
         subcategory: validated.subcategory,
         bankId: validated.bankId,
         date: validated.date,
-        isInstallment: validated.isInstallment,
-        installmentCount: validated.installmentCount,
-        installmentNumber: validated.installmentNumber,
-        parentTransactionId: validated.parentTransactionId,
-      };
+      });
 
-      onAddTransaction(transaction);
-      
-      const successMessage = isInstallment && numericInstallmentCount 
-        ? `Compra parcelada em ${numericInstallmentCount}x adicionada! Todas as parcelas foram criadas.`
-        : type === "income" 
-          ? "Receita adicionada com sucesso!" 
-          : "Despesa adicionada com sucesso!";
-      
-      toast.success(successMessage);
-
-      // Reset form
-      setDescription("");
-      setAmount("");
-      setCategoryId("");
-      setSubcategory("");
-      setBankId("");
-      setDate(new Date().toISOString().split("T")[0]);
-      setIsInstallment(false);
-      setInstallmentCount("");
-      setOpen(false);
+      toast.success("Transação atualizada com sucesso!");
+      onOpenChange(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error("Erro ao adicionar transação");
+        toast.error("Erro ao atualizar transação");
       }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nova Transação
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Transação</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-5 w-5" />
+            Editar Transação
+          </DialogTitle>
           <DialogDescription>
-            Registre uma nova receita ou despesa no seu controle financeiro.
+            Faça alterações na transação selecionada.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
+              <Label htmlFor="edit-type">Tipo</Label>
               <Select value={type} onValueChange={(value: TransactionType) => {
                 setType(value);
                 setCategoryId("");
                 setSubcategory("");
               }}>
-                <SelectTrigger id="type">
+                <SelectTrigger id="edit-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -160,9 +153,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Valor (R$)</Label>
+              <Label htmlFor="edit-amount">Valor{transaction?.isInstallment && " (por parcela)"}</Label>
               <Input
-                id="amount"
+                id="edit-amount"
                 type="number"
                 step="0.01"
                 placeholder="0,00"
@@ -173,9 +166,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="edit-description">Descrição</Label>
             <Input
-              id="description"
+              id="edit-description"
               placeholder="Ex: Salário, Supermercado..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -184,12 +177,12 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
+              <Label htmlFor="edit-category">Categoria</Label>
               <Select value={categoryId} onValueChange={(value) => {
                 setCategoryId(value);
                 setSubcategory("");
               }}>
-                <SelectTrigger id="category">
+                <SelectTrigger id="edit-category">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -204,9 +197,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
 
             {selectedCategory && selectedCategory.subcategories.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategoria</Label>
+                <Label htmlFor="edit-subcategory">Subcategoria</Label>
                 <Select value={subcategory} onValueChange={setSubcategory}>
-                  <SelectTrigger id="subcategory">
+                  <SelectTrigger id="edit-subcategory">
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
@@ -223,9 +216,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="bank">Banco/Cartão</Label>
+              <Label htmlFor="edit-bank">Banco/Cartão</Label>
               <Select value={bankId} onValueChange={setBankId}>
-                <SelectTrigger id="bank">
+                <SelectTrigger id="edit-bank">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -245,9 +238,9 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
+              <Label htmlFor="edit-date">Data</Label>
               <Input
-                id="date"
+                id="edit-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -255,55 +248,27 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="paymentType">Tipo de Pagamento</Label>
-            <Select 
-              value={isInstallment ? "installment" : "single"} 
-              onValueChange={(value) => {
-                setIsInstallment(value === "installment");
-                if (value === "single") {
-                  setInstallmentCount("");
-                }
-              }}
-            >
-              <SelectTrigger id="paymentType">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single">À vista</SelectItem>
-                <SelectItem value="installment">Parcelado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isInstallment && (
-            <div className="space-y-2">
-              <Label htmlFor="installmentCount">Número de Parcelas</Label>
-              <Input
-                id="installmentCount"
-                type="number"
-                min="2"
-                max="100"
-                placeholder="Ex: 12"
-                value={installmentCount}
-                onChange={(e) => setInstallmentCount(e.target.value)}
-              />
-              {installmentCount && amount && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Valor por parcela:</span>
-                    <span className="font-medium text-foreground ml-2">
-                      R$ {(parseFloat(amount) / parseInt(installmentCount)).toFixed(2)}
-                    </span>
-                  </p>
-                </div>
-              )}
+          {transaction?.isInstallment && (
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Esta é uma compra parcelada ({transaction.installmentNumber}/{transaction.installmentCount}x).
+                {transaction.installmentCount && amount && (
+                  <> Valor total: <span className="font-medium text-foreground">
+                    R$ {(parseFloat(amount) * transaction.installmentCount).toFixed(2)}
+                  </span></>
+                )}
+              </p>
             </div>
           )}
 
-          <Button type="submit" className="w-full">
-            Adicionar Transação
-          </Button>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1">
+              Salvar Alterações
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
