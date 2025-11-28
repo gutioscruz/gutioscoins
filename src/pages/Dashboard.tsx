@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, subMonths, format, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CardSummaryWidget } from "@/components/finance/CardSummaryWidget";
 
 const Dashboard = () => {
   const { transactions, categories, goals, alerts, markAlertAsRead, clearAllAlerts } = useFinance();
@@ -267,7 +268,10 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Card Summary Widget */}
+          <CardSummaryWidget />
+
           {/* Insights */}
           <Card>
             <CardHeader>

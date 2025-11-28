@@ -66,6 +66,16 @@ export const bankSchema = z.object({
 
 export type BankInput = z.infer<typeof bankSchema>;
 
+// Card validation
+export const cardSchema = z.object({
+  name: shortText,
+  limit: positiveAmount,
+  used: z.number().min(0, 'Valor usado não pode ser negativo').max(999999999),
+  color: colorHex,
+});
+
+export type CardInput = z.infer<typeof cardSchema>;
+
 // Investment validation
 export const investmentSchema = z.object({
   name: shortText,
