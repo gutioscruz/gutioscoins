@@ -29,6 +29,7 @@ export const useTransactions = () => {
         categoryId: t.category_id,
         subcategory: t.subcategory || undefined,
         bankId: t.bank_id,
+        cardId: t.card_id || undefined,
         date: new Date(t.date),
         recurringTransactionId: t.recurring_transaction_id || undefined,
         isInstallment: t.is_installment || false,
@@ -76,6 +77,7 @@ export const useTransactions = () => {
             category_id: validated.categoryId,
             subcategory: validated.subcategory,
             bank_id: validated.bankId,
+            card_id: transaction.cardId,
             date: installmentDate.toISOString().split('T')[0] + 'T00:00:00.000Z',
             is_installment: true,
             installment_count: validated.installmentCount,
@@ -121,6 +123,7 @@ export const useTransactions = () => {
           category_id: validated.categoryId,
           subcategory: validated.subcategory,
           bank_id: validated.bankId,
+          card_id: transaction.cardId,
           date: validated.date.toISOString().split('T')[0] + 'T00:00:00.000Z',
           recurring_transaction_id: transaction.recurringTransactionId,
           is_installment: validated.isInstallment,
@@ -166,6 +169,7 @@ export const useTransactions = () => {
             category_id: validated.categoryId,
             subcategory: validated.subcategory,
             bank_id: validated.bankId,
+            card_id: transaction.cardId,
             date: validated.date.toISOString().split('T')[0] + 'T00:00:00.000Z',
           })
           .eq('id', id)
@@ -186,6 +190,7 @@ export const useTransactions = () => {
           category_id: transaction.categoryId,
           subcategory: transaction.subcategory,
           bank_id: transaction.bankId,
+          card_id: transaction.cardId,
           date: transaction.date?.toISOString(),
         })
         .eq('id', id)

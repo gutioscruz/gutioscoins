@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const goalTypeLabels = {
   savings: "Poupança",
@@ -81,9 +82,21 @@ const Goals = () => {
   };
 
   const handleDelete = (id: string) => {
-    deleteGoal(id);
-    toast.success("Meta excluída!");
+    setSelectedGoal(id);
+    setDeleteDialogOpen(true);
   };
+
+  const confirmDelete = () => {
+    if (selectedGoalToDelete) {
+      deleteGoal(selectedGoalToDelete);
+      toast.success("Meta excluída!");
+    }
+    setDeleteDialogOpen(false);
+    setSelectedGoalToDelete(null);
+  };
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedGoalToDelete, setSelectedGoalToDelete] = useState<string | null>(null);
 
   const handleUpdateProgress = () => {
     if (!selectedGoal || !progressAmount) {
@@ -356,7 +369,10 @@ const Goals = () => {
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
-                            onClick={() => handleDelete(goal.id)}
+                            onClick={() => {
+                              setSelectedGoalToDelete(goal.id);
+                              setDeleteDialogOpen(true);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -422,7 +438,10 @@ const Goals = () => {
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => handleDelete(goal.id)}
+                        onClick={() => {
+                          setSelectedGoalToDelete(goal.id);
+                          setDeleteDialogOpen(true);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -92,6 +92,7 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
         categoryId: validated.categoryId,
         subcategory: validated.subcategory,
         bankId: validated.bankId,
+        cardId: cardId || undefined,
         date: validated.date,
         isInstallment: validated.isInstallment,
         installmentCount: validated.installmentCount,

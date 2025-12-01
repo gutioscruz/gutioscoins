@@ -105,6 +105,7 @@ export interface Transaction {
   categoryId: string;
   subcategory?: string;
   bankId: string;
+  cardId?: string;
   date: Date;
   recurringTransactionId?: string;
   isInstallment: boolean;
