@@ -53,7 +53,13 @@ export const useLoans = () => {
     mutationFn: async (loan: Omit<Loan, 'id' | 'payments' | 'totalPaid' | 'totalInterest'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      // Validate input (partial validation for loan creation)
+      // Calculate total interest using loan formula
+      const periodsPerYear = loan.paymentFrequency === 'monthly' ? 12 : loan.paymentFrequency === 'biweekly' ? 26 : 52;
+      const periodRate = (loan.interestRate / 100) / periodsPerYear;
+      const monthlyPayment = loan.principal * (periodRate * Math.pow(1 + periodRate, loan.installments)) / (Math.pow(1 + periodRate, loan.installments) - 1);
+      const totalInterest = (monthlyPayment * loan.installments) - loan.principal;
+
+      // Validate input
       const validated = loanSchema.parse({
         name: loan.name,
         description: loan.description,
@@ -63,12 +69,12 @@ export const useLoans = () => {
         paymentFrequency: loan.paymentFrequency,
         startDate: loan.startDate,
         status: loan.status,
-        totalInterest: 0,
+        totalInterest,
         totalPaid: 0,
         bankId: loan.bankId,
       });
 
-      const { data, error } = await supabase
+      const { data: loanData, error: loanError } = await supabase
         .from('loans')
         .insert({
           user_id: user.id,
@@ -87,8 +93,45 @@ export const useLoans = () => {
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (loanError) throw loanError;
+
+      // Generate loan payment installments
+      const payments = [];
+      for (let i = 1; i <= loan.installments; i++) {
+        const dueDate = new Date(loan.startDate);
+        
+        // Calculate due date based on frequency
+        if (loan.paymentFrequency === 'monthly') {
+          dueDate.setMonth(dueDate.getMonth() + i);
+        } else if (loan.paymentFrequency === 'biweekly') {
+          dueDate.setDate(dueDate.getDate() + (i * 14));
+        } else {
+          dueDate.setDate(dueDate.getDate() + (i * 7));
+        }
+
+        // Calculate interest and principal for this payment (simplified amortization)
+        const interestPayment = totalInterest / loan.installments;
+        const principalPayment = loan.principal / loan.installments;
+
+        payments.push({
+          loan_id: loanData.id,
+          installment_number: i,
+          due_date: dueDate.toISOString(),
+          amount: monthlyPayment,
+          principal: principalPayment,
+          interest: interestPayment,
+          paid: false,
+        });
+      }
+
+      // Insert all payments
+      const { error: paymentsError } = await supabase
+        .from('loan_payments')
+        .insert(payments);
+
+      if (paymentsError) throw paymentsError;
+
+      return loanData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
@@ -143,6 +186,103 @@ export const useLoans = () => {
     },
   });
 
+  const payLoanInstallment = useMutation({
+    mutationFn: async ({ loanId, installmentId }: { loanId: string; installmentId: string }) => {
+      const { data, error } = await supabase
+        .from('loan_payments')
+        .update({
+          paid: true,
+          paid_date: new Date().toISOString(),
+        })
+        .eq('id', installmentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update loan's total_paid
+      const { data: loanData, error: loanError } = await supabase
+        .from('loans')
+        .select('total_paid')
+        .eq('id', loanId)
+        .single();
+
+      if (loanError) throw loanError;
+
+      const { error: updateError } = await supabase
+        .from('loans')
+        .update({
+          total_paid: loanData.total_paid + data.amount,
+        })
+        .eq('id', loanId);
+
+      if (updateError) throw updateError;
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      toast.success('Parcela paga com sucesso!');
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao pagar parcela: ${error.message}`);
+    },
+  });
+
+  const payLoanInstallmentsAhead = useMutation({
+    mutationFn: async ({ loanId, count }: { loanId: string; count: number }) => {
+      const loan = loans.find(l => l.id === loanId);
+      if (!loan) throw new Error('Empréstimo não encontrado');
+
+      const unpaidPayments = loan.payments
+        .filter(p => !p.paid)
+        .sort((a, b) => a.installmentNumber - b.installmentNumber)
+        .slice(0, count);
+
+      const paymentIds = unpaidPayments.map(p => p.id);
+
+      const { error } = await supabase
+        .from('loan_payments')
+        .update({
+          paid: true,
+          paid_date: new Date().toISOString(),
+        })
+        .in('id', paymentIds);
+
+      if (error) throw error;
+
+      const totalAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0);
+
+      // Get current total_paid
+      const { data: loanData, error: loanFetchError } = await supabase
+        .from('loans')
+        .select('total_paid')
+        .eq('id', loanId)
+        .single();
+
+      if (loanFetchError) throw loanFetchError;
+
+      // Update loan's total_paid
+      const { error: loanError } = await supabase
+        .from('loans')
+        .update({
+          total_paid: loanData.total_paid + totalAmount,
+        })
+        .eq('id', loanId);
+
+      if (loanError) throw loanError;
+
+      return { count, totalAmount };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      toast.success(`${data.count} parcelas pagas com sucesso!`);
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao antecipar parcelas: ${error.message}`);
+    },
+  });
+
   return {
     loans,
     isLoading,
@@ -150,5 +290,7 @@ export const useLoans = () => {
     addLoan: addLoan.mutate,
     updateLoan: updateLoan.mutate,
     deleteLoan: deleteLoan.mutate,
+    payLoanInstallment: payLoanInstallment.mutate,
+    payLoanInstallmentsAhead: payLoanInstallmentsAhead.mutate,
   };
 };
