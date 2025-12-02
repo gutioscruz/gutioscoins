@@ -4,20 +4,48 @@ import { Transaction } from '@/types/finance';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { transactionSchema } from '@/lib/validations';
+import { BatchTransaction } from '@/components/finance/BatchTransactionDialog';
 
-export const useTransactions = () => {
+interface TransactionFilters {
+  startDate?: Date;
+  endDate?: Date;
+  bankId?: string;
+  categoryId?: string;
+  search?: string;
+}
+
+export const useTransactions = (filters?: TransactionFilters) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const { data: transactions = [], isLoading, error } = useQuery({
-    queryKey: ['transactions'],
+    queryKey: ['transactions', filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.bankId, filters?.categoryId, filters?.search],
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('transactions')
         .select('*')
         .order('date', { ascending: false });
+
+      // Server-side filtering for better performance
+      if (filters?.startDate) {
+        query = query.gte('date', filters.startDate.toISOString());
+      }
+      if (filters?.endDate) {
+        query = query.lte('date', filters.endDate.toISOString());
+      }
+      if (filters?.bankId) {
+        query = query.eq('bank_id', filters.bankId);
+      }
+      if (filters?.categoryId) {
+        query = query.eq('category_id', filters.categoryId);
+      }
+      if (filters?.search) {
+        query = query.ilike('description', `%${filters.search}%`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -39,6 +67,7 @@ export const useTransactions = () => {
       })) as Transaction[];
     },
     enabled: !!user,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const addTransaction = useMutation({
@@ -59,6 +88,38 @@ export const useTransactions = () => {
         installmentNumber: transaction.installmentNumber,
         parentTransactionId: transaction.parentTransactionId,
       });
+
+      // If it's an installment with a card, update card limit with TOTAL value
+      if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1 && transaction.cardId) {
+        const totalAmount = validated.amount * validated.installmentCount;
+        
+        // Update card used_amount with total value
+        const { error: cardError } = await supabase
+          .from('cards')
+          .update({ 
+            used_amount: supabase.rpc('increment_card_used_amount', { 
+              card_id: transaction.cardId, 
+              amount_to_add: totalAmount 
+            })
+          })
+          .eq('id', transaction.cardId);
+
+        // If RPC doesn't exist, do manual update
+        if (cardError) {
+          const { data: cardData } = await supabase
+            .from('cards')
+            .select('used_amount')
+            .eq('id', transaction.cardId)
+            .single();
+          
+          if (cardData) {
+            await supabase
+              .from('cards')
+              .update({ used_amount: (cardData.used_amount || 0) + totalAmount })
+              .eq('id', transaction.cardId);
+          }
+        }
+      }
 
       // If it's an installment, create all installments
       if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1) {
@@ -82,7 +143,7 @@ export const useTransactions = () => {
             is_installment: true,
             installment_count: validated.installmentCount,
             installment_number: i,
-            parent_transaction_id: i === 1 ? null : undefined, // Will be updated after first insert
+            parent_transaction_id: i === 1 ? null : undefined,
           });
         }
 
@@ -112,7 +173,7 @@ export const useTransactions = () => {
         return firstInstallment;
       }
 
-      // Regular transaction
+      // Regular transaction (triggers will handle card update if needed)
       const { data, error } = await supabase
         .from('transactions')
         .insert({
@@ -139,6 +200,7 @@ export const useTransactions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['banks'] });
       toast.success('Transação adicionada com sucesso!');
     },
     onError: (error: any) => {
@@ -146,9 +208,56 @@ export const useTransactions = () => {
     },
   });
 
+  const addBatchTransactions = useMutation({
+    mutationFn: async (batchData: { transactions: BatchTransaction[], categories: any[], banks: any[] }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const { transactions: batchTransactions, categories, banks } = batchData;
+      
+      const transactionsToInsert = batchTransactions.map(t => {
+        const category = categories.find(c => 
+          c.name.toLowerCase() === t.categoryName.toLowerCase() && 
+          c.type === t.type
+        );
+        const bank = banks.find(b => b.name.toLowerCase() === t.bankName.toLowerCase());
+
+        return {
+          user_id: user.id,
+          description: t.description,
+          amount: t.amount,
+          type: t.type,
+          category_id: category?.id,
+          subcategory: t.subcategory,
+          bank_id: bank?.id,
+          date: t.date + 'T00:00:00.000Z',
+          is_installment: false,
+        };
+      });
+
+      // Insert in batches of 50 for better performance
+      const batchSize = 50;
+      for (let i = 0; i < transactionsToInsert.length; i += batchSize) {
+        const batch = transactionsToInsert.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('transactions')
+          .insert(batch);
+
+        if (error) throw error;
+      }
+
+      return { count: transactionsToInsert.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      toast.success(`${data.count} transações importadas com sucesso!`);
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao importar transações: ${error.message}`);
+    },
+  });
+
   const updateTransaction = useMutation({
     mutationFn: async ({ id, transaction }: { id: string; transaction: Partial<Transaction> }) => {
-      // Validate if we have all required fields for full validation
       if (transaction.description && transaction.amount && transaction.type && transaction.date && transaction.categoryId && transaction.bankId) {
         const validated = transactionSchema.parse({
           description: transaction.description,
@@ -180,7 +289,6 @@ export const useTransactions = () => {
         return data;
       }
 
-      // Partial update without full validation
       const { data, error } = await supabase
         .from('transactions')
         .update({
@@ -202,6 +310,7 @@ export const useTransactions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['banks'] });
       toast.success('Transação atualizada com sucesso!');
     },
     onError: (error: any) => {
@@ -211,6 +320,36 @@ export const useTransactions = () => {
 
   const deleteTransaction = useMutation({
     mutationFn: async (id: string) => {
+      // Get transaction to check if it's the first installment with card
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (txData?.is_installment && txData?.installment_number === 1 && txData?.card_id && txData?.installment_count) {
+        // Release total amount from card
+        const totalAmount = Number(txData.amount) * txData.installment_count;
+        const { data: cardData } = await supabase
+          .from('cards')
+          .select('used_amount')
+          .eq('id', txData.card_id)
+          .single();
+
+        if (cardData) {
+          await supabase
+            .from('cards')
+            .update({ used_amount: Math.max(0, (cardData.used_amount || 0) - totalAmount) })
+            .eq('id', txData.card_id);
+        }
+
+        // Delete all related installments
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('parent_transaction_id', id);
+      }
+
       const { error } = await supabase
         .from('transactions')
         .delete()
@@ -220,6 +359,7 @@ export const useTransactions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['banks'] });
       toast.success('Transação excluída com sucesso!');
     },
     onError: (error: any) => {
@@ -232,6 +372,7 @@ export const useTransactions = () => {
     isLoading,
     error,
     addTransaction: addTransaction.mutate,
+    addBatchTransactions: addBatchTransactions.mutateAsync,
     updateTransaction: updateTransaction.mutate,
     deleteTransaction: deleteTransaction.mutate,
   };
