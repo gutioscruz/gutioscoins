@@ -91,7 +91,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
 
       // If it's an installment with a card, update card limit with TOTAL value
       if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1 && transaction.cardId) {
-        const totalAmount = validated.amount * validated.installmentCount;
+        // validated.amount is the TOTAL purchase value - use it directly for card limit
+        const totalAmount = validated.amount;
         
         // Get current card used_amount and update with total value
         const { data: cardData } = await supabase
@@ -112,6 +113,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
       if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1) {
         const installments = [];
         const baseDate = new Date(validated.date);
+        // Calculate per-installment amount (round to 2 decimals)
+        const installmentAmount = Math.round((validated.amount / validated.installmentCount) * 100) / 100;
         
         for (let i = 1; i <= validated.installmentCount; i++) {
           const installmentDate = new Date(baseDate);
@@ -120,7 +123,7 @@ export const useTransactions = (filters?: TransactionFilters) => {
           installments.push({
             user_id: user.id,
             description: `${validated.description} (${i}/${validated.installmentCount})`,
-            amount: validated.amount,
+            amount: installmentAmount,
             type: validated.type,
             category_id: validated.categoryId,
             subcategory: validated.subcategory,
