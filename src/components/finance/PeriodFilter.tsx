@@ -7,8 +7,9 @@ import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, su
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MonthYearPicker } from "./MonthYearPicker";
 
-export type PeriodPreset = "thisMonth" | "lastMonth" | "last3Months" | "last6Months" | "thisYear" | "lastYear" | "custom";
+export type PeriodPreset = "thisMonth" | "lastMonth" | "specificMonth" | "last3Months" | "last6Months" | "thisYear" | "lastYear" | "custom";
 
 interface PeriodFilterProps {
   startDate: Date | undefined;
@@ -18,6 +19,7 @@ interface PeriodFilterProps {
 
 export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilterProps) => {
   const [preset, setPreset] = useState<PeriodPreset>("thisMonth");
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
   const applyPreset = (presetValue: PeriodPreset) => {
     setPreset(presetValue);
@@ -30,6 +32,9 @@ export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilte
       case "lastMonth":
         const lastMonth = subMonths(now, 1);
         onPeriodChange(startOfMonth(lastMonth), endOfMonth(lastMonth));
+        break;
+      case "specificMonth":
+        onPeriodChange(startOfMonth(selectedMonth), endOfMonth(selectedMonth));
         break;
       case "last3Months":
         onPeriodChange(subMonths(now, 3), now);
@@ -50,6 +55,11 @@ export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilte
     }
   };
 
+  const handleMonthSelect = (start: Date, end: Date) => {
+    setSelectedMonth(start);
+    onPeriodChange(start, end);
+  };
+
   return (
     <div className="flex flex-wrap gap-2 items-center">
       <Select value={preset} onValueChange={(v: PeriodPreset) => applyPreset(v)}>
@@ -59,6 +69,7 @@ export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilte
         <SelectContent>
           <SelectItem value="thisMonth">Este Mês</SelectItem>
           <SelectItem value="lastMonth">Mês Passado</SelectItem>
+          <SelectItem value="specificMonth">Mês Específico</SelectItem>
           <SelectItem value="last3Months">Últimos 3 Meses</SelectItem>
           <SelectItem value="last6Months">Últimos 6 Meses</SelectItem>
           <SelectItem value="thisYear">Este Ano</SelectItem>
@@ -66,6 +77,13 @@ export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilte
           <SelectItem value="custom">Personalizado</SelectItem>
         </SelectContent>
       </Select>
+
+      {preset === "specificMonth" && (
+        <MonthYearPicker 
+          selectedDate={selectedMonth}
+          onSelect={handleMonthSelect}
+        />
+      )}
 
       {preset === "custom" && (
         <>
