@@ -93,31 +93,18 @@ export const useTransactions = (filters?: TransactionFilters) => {
       if (validated.isInstallment && validated.installmentCount && validated.installmentCount > 1 && transaction.cardId) {
         const totalAmount = validated.amount * validated.installmentCount;
         
-        // Update card used_amount with total value
-        const { error: cardError } = await supabase
+        // Get current card used_amount and update with total value
+        const { data: cardData } = await supabase
           .from('cards')
-          .update({ 
-            used_amount: supabase.rpc('increment_card_used_amount', { 
-              card_id: transaction.cardId, 
-              amount_to_add: totalAmount 
-            })
-          })
-          .eq('id', transaction.cardId);
-
-        // If RPC doesn't exist, do manual update
-        if (cardError) {
-          const { data: cardData } = await supabase
+          .select('used_amount')
+          .eq('id', transaction.cardId)
+          .single();
+        
+        if (cardData) {
+          await supabase
             .from('cards')
-            .select('used_amount')
-            .eq('id', transaction.cardId)
-            .single();
-          
-          if (cardData) {
-            await supabase
-              .from('cards')
-              .update({ used_amount: (cardData.used_amount || 0) + totalAmount })
-              .eq('id', transaction.cardId);
-          }
+            .update({ used_amount: (cardData.used_amount || 0) + totalAmount })
+            .eq('id', transaction.cardId);
         }
       }
 

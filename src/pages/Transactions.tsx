@@ -124,7 +124,7 @@ const Transactions = () => {
           transaction={editingTransaction}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          onUpdateTransaction={updateTransaction}
+          onUpdateTransaction={(id, transaction) => updateTransaction({ id, transaction })}
           categories={categories}
           banks={banks}
         />
