@@ -1,15 +1,7 @@
-import { useState } from "react";
-import { Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears } from "date-fns";
+import { useMemo } from "react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MonthYearPicker } from "./MonthYearPicker";
-
-export type PeriodPreset = "thisMonth" | "lastMonth" | "specificMonth" | "last3Months" | "last6Months" | "thisYear" | "lastYear" | "custom";
 
 interface PeriodFilterProps {
   startDate: Date | undefined;
@@ -17,125 +9,73 @@ interface PeriodFilterProps {
   onPeriodChange: (start: Date | undefined, end: Date | undefined) => void;
 }
 
-export const PeriodFilter = ({ startDate, endDate, onPeriodChange }: PeriodFilterProps) => {
-  const [preset, setPreset] = useState<PeriodPreset>("thisMonth");
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-
-  const applyPreset = (presetValue: PeriodPreset) => {
-    setPreset(presetValue);
+export const PeriodFilter = ({ startDate, onPeriodChange }: PeriodFilterProps) => {
+  // Generate list of months: 12 past + current + 12 future
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string; date: Date }[] = [];
     const now = new Date();
+    
+    // 12 months in the past
+    for (let i = 12; i >= 1; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = format(date, "MMMM", { locale: ptBR });
+      const year = format(date, "yy");
+      const label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} '${year}`;
+      options.push({ value, label, date });
+    }
+    
+    // Current month
+    const currentValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonthName = format(now, "MMMM", { locale: ptBR });
+    const currentYear = format(now, "yy");
+    options.push({ 
+      value: currentValue, 
+      label: `${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)} '${currentYear}`,
+      date: new Date(now.getFullYear(), now.getMonth(), 1)
+    });
+    
+    // 12 months in the future
+    for (let i = 1; i <= 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = format(date, "MMMM", { locale: ptBR });
+      const year = format(date, "yy");
+      const label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} '${year}`;
+      options.push({ value, label, date });
+    }
+    
+    return options;
+  }, []);
 
-    switch (presetValue) {
-      case "thisMonth":
-        onPeriodChange(startOfMonth(now), endOfMonth(now));
-        break;
-      case "lastMonth":
-        const lastMonth = subMonths(now, 1);
-        onPeriodChange(startOfMonth(lastMonth), endOfMonth(lastMonth));
-        break;
-      case "specificMonth":
-        onPeriodChange(startOfMonth(selectedMonth), endOfMonth(selectedMonth));
-        break;
-      case "last3Months":
-        onPeriodChange(subMonths(now, 3), now);
-        break;
-      case "last6Months":
-        onPeriodChange(subMonths(now, 6), now);
-        break;
-      case "thisYear":
-        onPeriodChange(startOfYear(now), endOfYear(now));
-        break;
-      case "lastYear":
-        const lastYear = subYears(now, 1);
-        onPeriodChange(startOfYear(lastYear), endOfYear(lastYear));
-        break;
-      case "custom":
-        // Mantém as datas atuais
-        break;
+  const currentValue = startDate 
+    ? `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`
+    : monthOptions.find(opt => {
+        const now = new Date();
+        return opt.date.getFullYear() === now.getFullYear() && opt.date.getMonth() === now.getMonth();
+      })?.value || "";
+
+  const handleMonthChange = (value: string) => {
+    const selected = monthOptions.find(opt => opt.value === value);
+    if (selected) {
+      onPeriodChange(startOfMonth(selected.date), endOfMonth(selected.date));
     }
   };
 
-  const handleMonthSelect = (start: Date, end: Date) => {
-    setSelectedMonth(start);
-    onPeriodChange(start, end);
-  };
+  const currentLabel = monthOptions.find(opt => opt.value === currentValue)?.label || "Selecione";
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
-      <Select value={preset} onValueChange={(v: PeriodPreset) => applyPreset(v)}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="thisMonth">Este Mês</SelectItem>
-          <SelectItem value="lastMonth">Mês Passado</SelectItem>
-          <SelectItem value="specificMonth">Mês Específico</SelectItem>
-          <SelectItem value="last3Months">Últimos 3 Meses</SelectItem>
-          <SelectItem value="last6Months">Últimos 6 Meses</SelectItem>
-          <SelectItem value="thisYear">Este Ano</SelectItem>
-          <SelectItem value="lastYear">Ano Passado</SelectItem>
-          <SelectItem value="custom">Personalizado</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {preset === "specificMonth" && (
-        <MonthYearPicker 
-          selectedDate={selectedMonth}
-          onSelect={handleMonthSelect}
-        />
-      )}
-
-      {preset === "custom" && (
-        <>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "justify-start text-left font-normal",
-                  !startDate && "text-muted-foreground"
-                )}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "PPP", { locale: ptBR }) : "Data inicial"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={startDate}
-                onSelect={(date) => onPeriodChange(date, endDate)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "justify-start text-left font-normal",
-                  !endDate && "text-muted-foreground"
-                )}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "PPP", { locale: ptBR }) : "Data final"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={endDate}
-                onSelect={(date) => onPeriodChange(startDate, date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </>
-      )}
-    </div>
+    <Select value={currentValue} onValueChange={handleMonthChange}>
+      <SelectTrigger className="w-[160px]">
+        <SelectValue>{currentLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {monthOptions.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
