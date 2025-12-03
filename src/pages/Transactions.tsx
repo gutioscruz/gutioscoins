@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { SummaryCards } from "@/components/finance/SummaryCards";
 import { TransactionList } from "@/components/finance/TransactionList";
-import { MonthlyChart } from "@/components/finance/MonthlyChart";
-import { SubcategoryChart } from "@/components/finance/SubcategoryChart";
+import { InteractivePieChart } from "@/components/finance/InteractivePieChart";
+import { CategoryDetailsDialog } from "@/components/finance/CategoryDetailsDialog";
 import { AddTransactionDialog } from "@/components/finance/AddTransactionDialog";
 import { EditTransactionDialog } from "@/components/finance/EditTransactionDialog";
 import { PeriodFilter } from "@/components/finance/PeriodFilter";
@@ -14,6 +14,13 @@ import { useBanks } from "@/hooks/useBanks";
 import { Transaction } from "@/types/finance";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
+interface SelectedCategory {
+  name: string;
+  color: string;
+  categoryId?: string;
+  subcategory?: string;
+}
+
 const Transactions = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
@@ -21,8 +28,13 @@ const Transactions = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  
+  // Chart interaction state
+  const [categoryDetailsOpen, setCategoryDetailsOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(null);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | undefined>(undefined);
+  const [activeSubcategoryIndex, setActiveSubcategoryIndex] = useState<number | undefined>(undefined);
 
-  // Server-side filtered transactions
   const { 
     transactions, 
     isLoading: isLoadingTransactions, 
@@ -72,6 +84,26 @@ const Transactions = () => {
       banks 
     });
   };
+
+  const handleCategorySliceClick = (item: { name: string; color: string; categoryId?: string; subcategory?: string }) => {
+    setSelectedCategory({
+      name: item.name,
+      color: item.color,
+      categoryId: item.categoryId,
+      subcategory: item.subcategory,
+    });
+    setCategoryDetailsOpen(true);
+  };
+
+  const handleEditFromDialog = (transaction: Transaction) => {
+    setCategoryDetailsOpen(false);
+    handleEdit(transaction);
+  };
+
+  const handleDeleteFromDialog = (id: string) => {
+    setCategoryDetailsOpen(false);
+    handleDelete(id);
+  };
   
   if (isLoading) {
     return (
@@ -83,7 +115,7 @@ const Transactions = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <main className="container mx-auto px-4 py-8 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-3xl font-bold">Transações</h1>
           <div className="flex flex-wrap gap-2 items-center">
@@ -106,19 +138,51 @@ const Transactions = () => {
 
         <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} />
 
-        <div className="grid gap-8 md:grid-cols-2">
-          <TransactionList 
-            transactions={transactions} 
-            categories={categories} 
-            banks={banks}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-          <div className="space-y-8">
-            <MonthlyChart transactions={transactions} categories={categories} />
-            <SubcategoryChart transactions={transactions} categories={categories} />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <TransactionList 
+              transactions={transactions} 
+              categories={categories} 
+              banks={banks}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </div>
+          <div className="space-y-6">
+            <InteractivePieChart
+              transactions={transactions}
+              categories={categories}
+              type="category"
+              onSliceClick={handleCategorySliceClick}
+              activeIndex={activeCategoryIndex}
+              onActiveIndexChange={setActiveCategoryIndex}
+            />
+            <InteractivePieChart
+              transactions={transactions}
+              categories={categories}
+              type="subcategory"
+              onSliceClick={handleCategorySliceClick}
+              activeIndex={activeSubcategoryIndex}
+              onActiveIndexChange={setActiveSubcategoryIndex}
+            />
           </div>
         </div>
+
+        {selectedCategory && (
+          <CategoryDetailsDialog
+            open={categoryDetailsOpen}
+            onOpenChange={setCategoryDetailsOpen}
+            categoryName={selectedCategory.name}
+            categoryColor={selectedCategory.color}
+            categoryId={selectedCategory.categoryId}
+            subcategory={selectedCategory.subcategory}
+            transactions={transactions}
+            categories={categories}
+            banks={banks}
+            onEdit={handleEditFromDialog}
+            onDelete={handleDeleteFromDialog}
+          />
+        )}
 
         <EditTransactionDialog
           transaction={editingTransaction}
@@ -141,4 +205,5 @@ const Transactions = () => {
     </div>
   );
 };
+
 export default Transactions;
