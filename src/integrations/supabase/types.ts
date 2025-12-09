@@ -83,6 +83,39 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_areas: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          percentage: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          percentage?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          percentage?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           bank_id: string
@@ -153,6 +186,42 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      category_area_mappings: {
+        Row: {
+          budget_area_id: string
+          category_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          budget_area_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          budget_area_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_area_mappings_budget_area_id_fkey"
+            columns: ["budget_area_id"]
+            isOneToOne: false
+            referencedRelation: "budget_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_area_mappings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       goals: {
         Row: {
@@ -546,6 +615,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_salary: number | null
+          salary_auto_calculate: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_salary?: number | null
+          salary_auto_calculate?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_salary?: number | null
+          salary_auto_calculate?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -129,6 +129,40 @@ export interface RecurringTransaction {
   lastGenerated?: Date;
 }
 
+export interface UserSettings {
+  id: string;
+  monthlySalary: number | null;
+  salaryAutoCalculate: boolean;
+}
+
+export interface BudgetArea {
+  id: string;
+  name: string;
+  percentage: number;
+  color: string;
+  orderIndex: number;
+  categoryIds: string[];
+}
+
+export interface BudgetAreaAllocation {
+  area: BudgetArea;
+  plannedAmount: number;
+  actualAmount: number;
+  variance: number;
+  variancePercentage: number;
+  categories: Category[];
+}
+
+export const defaultBudgetAreas = [
+  { name: "Custos Fixos", percentage: 50, color: "#3B82F6", orderIndex: 0 },
+  { name: "Lazer", percentage: 10, color: "#8B5CF6", orderIndex: 1 },
+  { name: "Compras", percentage: 10, color: "#EC4899", orderIndex: 2 },
+  { name: "Educação", percentage: 5, color: "#10B981", orderIndex: 3 },
+  { name: "Investimentos", percentage: 15, color: "#F59E0B", orderIndex: 4 },
+  { name: "Performance", percentage: 5, color: "#EF4444", orderIndex: 5 },
+  { name: "Variáveis", percentage: 5, color: "#6B7280", orderIndex: 6 },
+];
+
 export const defaultIncomeCategories: Category[] = [
   { id: "1", name: "Salário", type: "income", subcategories: ["Salário Base", "Bônus", "13º"] },
   { id: "2", name: "Freelance", type: "income", subcategories: ["Projeto", "Consultoria"] },
