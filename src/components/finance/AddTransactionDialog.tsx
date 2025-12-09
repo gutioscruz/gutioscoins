@@ -254,13 +254,13 @@ export const AddTransactionDialog = ({ onAddTransaction, categories, banks }: Ad
           {hasCards && (
             <div className="space-y-2">
               <Label htmlFor="card">Cartão (Opcional)</Label>
-              <Select value={cardId} onValueChange={setCardId}>
+              <Select value={cardId || "none"} onValueChange={(value) => setCardId(value === "none" ? "" : value)}>
                 <SelectTrigger id="card">
                   <SelectValue placeholder="Selecione um cartão ou deixe em branco" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum (usar conta do banco)</SelectItem>
-                  {selectedBank?.cards?.map((card) => (
+                  <SelectItem value="none">Nenhum (usar conta do banco)</SelectItem>
+                  {selectedBank?.cards?.filter(card => card.id).map((card) => (
                     <SelectItem key={card.id} value={card.id}>
                       <div className="flex items-center gap-2">
                         <div 
