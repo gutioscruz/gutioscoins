@@ -162,3 +162,21 @@ export const signInSchema = z.object({
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
+
+// Budget Area validation
+export const budgetAreaSchema = z.object({
+  name: shortText,
+  percentage: z.number().min(0, 'Porcentagem mínima é 0').max(100, 'Porcentagem máxima é 100'),
+  color: colorHex,
+  orderIndex: z.number().int().min(0),
+});
+
+export type BudgetAreaInput = z.infer<typeof budgetAreaSchema>;
+
+// User Settings validation
+export const userSettingsSchema = z.object({
+  monthlySalary: z.number().positive('Salário deve ser positivo').max(999999999, 'Valor muito alto').nullable(),
+  salaryAutoCalculate: z.boolean(),
+});
+
+export type UserSettingsInput = z.infer<typeof userSettingsSchema>;
