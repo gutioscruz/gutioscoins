@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Building2, CreditCard, Wallet, TrendingUp, PiggyBank } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, CreditCard, Wallet, TrendingUp, PiggyBank, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BankType, InvestmentType } from "@/types/finance";
+import { BankType, InvestmentType, Card as CardType } from "@/types/finance";
 import { toast } from "sonner";
 import { useFinance } from "@/contexts/FinanceContext";
+import { CardStatementDialog } from "@/components/cards/CardStatementDialog";
 
 const bankTypeLabels = {
   checking: "Conta Corrente",
@@ -52,6 +53,7 @@ const Banks = () => {
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
   const [editingCardData, setEditingCardData] = useState<{ bankId: string; cardId: string | null } | null>(null);
   const [editingInvestmentId, setEditingInvestmentId] = useState<string | null>(null);
+  const [statementDialogData, setStatementDialogData] = useState<{ card: CardType; bankId: string } | null>(null);
   
   const [bankFormData, setBankFormData] = useState({
     name: "",
@@ -472,6 +474,15 @@ const Banks = () => {
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0"
+                                    title="Ver Fatura"
+                                    onClick={() => setStatementDialogData({ card, bankId: bank.id })}
+                                  >
+                                    <Receipt className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
                                     onClick={() => openEditCardDialog(bank.id, card.id)}
                                   >
                                     <Pencil className="h-3 w-3" />
@@ -742,6 +753,17 @@ const Banks = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Card Statement Dialog */}
+        {statementDialogData && (
+          <CardStatementDialog
+            open={!!statementDialogData}
+            onOpenChange={(open) => !open && setStatementDialogData(null)}
+            card={statementDialogData.card}
+            bank={banks.find(b => b.id === statementDialogData.bankId)!}
+            banks={banks}
+          />
+        )}
       </main>
     </div>
   );
