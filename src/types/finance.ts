@@ -20,6 +20,23 @@ export interface Card {
   limit: number;
   used: number;
   color: string;
+  closingDay?: number;
+  dueDay?: number;
+}
+
+export type CardStatementStatus = 'open' | 'closed' | 'paid' | 'partial';
+
+export interface CardStatement {
+  id: string;
+  cardId: string;
+  referenceMonth: Date;
+  closingDate: Date;
+  dueDate: Date;
+  totalAmount: number;
+  paidAmount: number;
+  status: CardStatementStatus;
+  paidAt?: Date;
+  paidFromBankId?: string;
 }
 
 export interface Bank {

@@ -116,11 +116,73 @@ export type Database = {
         }
         Relationships: []
       }
+      card_statements: {
+        Row: {
+          card_id: string
+          closing_date: string
+          created_at: string
+          due_date: string
+          id: string
+          paid_amount: number
+          paid_at: string | null
+          paid_from_bank_id: string | null
+          reference_month: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          closing_date: string
+          created_at?: string
+          due_date: string
+          id?: string
+          paid_amount?: number
+          paid_at?: string | null
+          paid_from_bank_id?: string | null
+          reference_month: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          closing_date?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          paid_amount?: number
+          paid_at?: string | null
+          paid_from_bank_id?: string | null
+          reference_month?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_statements_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_statements_paid_from_bank_id_fkey"
+            columns: ["paid_from_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           bank_id: string
+          closing_day: number | null
           color: string
           created_at: string
+          due_day: number | null
           id: string
           limit_amount: number
           name: string
@@ -129,8 +191,10 @@ export type Database = {
         }
         Insert: {
           bank_id: string
+          closing_day?: number | null
           color: string
           created_at?: string
+          due_day?: number | null
           id?: string
           limit_amount: number
           name: string
@@ -139,8 +203,10 @@ export type Database = {
         }
         Update: {
           bank_id?: string
+          closing_day?: number | null
           color?: string
           created_at?: string
+          due_day?: number | null
           id?: string
           limit_amount?: number
           name?: string
