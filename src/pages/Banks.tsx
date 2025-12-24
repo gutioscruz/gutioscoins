@@ -11,6 +11,7 @@ import { BankType, InvestmentType, Card as CardType } from "@/types/finance";
 import { toast } from "sonner";
 import { useFinance } from "@/contexts/FinanceContext";
 import { CardStatementDialog } from "@/components/cards/CardStatementDialog";
+import { MonthlyStatementsOverview } from "@/components/cards/MonthlyStatementsOverview";
 
 const bankTypeLabels = {
   checking: "Conta Corrente",
@@ -325,6 +326,18 @@ const Banks = () => {
           </TabsList>
 
           <TabsContent value="banks" className="space-y-6 mt-6">
+            {/* Monthly Statements Overview */}
+            <MonthlyStatementsOverview 
+              banks={banks} 
+              onCardClick={(cardInfo) => {
+                const bank = banks.find(b => b.id === cardInfo.bankId);
+                const card = bank?.cards?.find(c => c.id === cardInfo.id);
+                if (card) {
+                  setStatementDialogData({ card, bankId: cardInfo.bankId });
+                }
+              }}
+            />
+
             <div className="flex justify-end">
               <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
                 <DialogTrigger asChild>
