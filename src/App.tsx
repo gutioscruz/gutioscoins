@@ -12,6 +12,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import RecurringTransactions from "./pages/RecurringTransactions";
+import Installments from "./pages/Installments";
 import Categories from "./pages/Categories";
 import Banks from "./pages/Banks";
 import Budget from "./pages/Budget";
@@ -46,6 +47,7 @@ const App = () => (
                                 <Route path="/" element={<Transactions />} />
                                 <Route path="/dashboard" element={<Dashboard />} />
                                 <Route path="/recurring" element={<RecurringTransactions />} />
+                                <Route path="/installments" element={<Installments />} />
                                 <Route path="/categories" element={<Categories />} />
                                 <Route path="/banks" element={<Banks />} />
                                 <Route path="/budget" element={<Budget />} />
