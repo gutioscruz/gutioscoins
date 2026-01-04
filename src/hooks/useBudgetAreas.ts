@@ -98,15 +98,18 @@ export const useBudgetAreas = () => {
 
   const updateAllPercentages = useMutation({
     mutationFn: async (areas: { id: string; percentage: number }[]) => {
-      // Update all areas in sequence (Supabase doesn't support bulk updates easily)
-      for (const area of areas) {
-        const { error } = await supabase
+      // Update all areas in parallel for better performance
+      const updatePromises = areas.map((area) =>
+        supabase
           .from("budget_areas")
           .update({ percentage: area.percentage })
-          .eq("id", area.id);
+          .eq("id", area.id)
+          .then(({ error }) => {
+            if (error) throw error;
+          })
+      );
 
-        if (error) throw error;
-      }
+      await Promise.all(updatePromises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget-areas"] });

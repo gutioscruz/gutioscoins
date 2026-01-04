@@ -1,30 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { CategoryBreakdown } from "@/hooks/useInstallments";
+import { formatCurrency } from "@/lib/utils";
 
 interface CategoryPieChartProps {
   data: CategoryBreakdown[];
 }
 
-const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
 export function CategoryPieChart({ data }: CategoryPieChartProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-
   const chartData = data.map((item) => ({
     name: item.categoryName,
     value: item.remainingAmount,
     count: item.count,
+    color: item.color,
   }));
 
   const totalRemaining = data.reduce((sum, item) => sum + item.remainingAmount, 0);
@@ -59,8 +47,8 @@ export function CategoryPieChart({ data }: CategoryPieChartProps) {
               paddingAngle={2}
               dataKey="value"
             >
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip

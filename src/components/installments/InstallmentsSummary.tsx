@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Layers, DollarSign, Clock, CheckCircle2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface InstallmentsSummaryProps {
   activeCount: number;
@@ -14,11 +15,6 @@ export function InstallmentsSummary({
   remainingAmount,
   paidAmount,
 }: InstallmentsSummaryProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
 
   const cards = [
     {

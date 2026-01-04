@@ -12,6 +12,7 @@ import { AreaDetailsDialog } from "@/components/budget/AreaDetailsDialog";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useBudgetAreas } from "@/hooks/useBudgetAreas";
 import { useBudgetAllocation } from "@/hooks/useBudgetAllocation";
+import { formatCurrency } from "@/lib/utils";
 import type { BudgetAreaAllocation } from "@/types/finance";
 
 const Budget = () => {
@@ -147,13 +148,6 @@ const Budget = () => {
   const totalCurrent = budgetProjection.reduce((sum, item) => sum + item.current, 0);
   const totalVarianceHistorical = totalCurrent - totalEstimated;
   const totalVariancePercentage = totalEstimated > 0 ? (totalVarianceHistorical / totalEstimated) * 100 : 0;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
