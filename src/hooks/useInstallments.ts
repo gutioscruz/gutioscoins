@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { startOfMonth, endOfMonth, addMonths, isBefore, isAfter, parseISO, format } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths, isBefore, isAfter, parseISO, format, differenceInDays } from "date-fns";
+import { getCategoryColor } from "@/lib/categoryColors";
 
 export interface InstallmentGroup {
   id: string;
@@ -16,6 +17,8 @@ export interface InstallmentGroup {
   remainingAmount: number;
   startDate: Date;
   endDate: Date;
+  nextDueDate?: Date;
+  daysUntilNextDue?: number;
   categoryId: string;
   categoryName?: string;
   cardId?: string;
@@ -162,6 +165,12 @@ export function useInstallments() {
       } else {
         group.remainingCount += 1;
         group.remainingAmount += tx.amount;
+        
+        // Track next due date
+        if (!group.nextDueDate || isBefore(txDate, group.nextDueDate)) {
+          group.nextDueDate = txDate;
+          group.daysUntilNextDue = differenceInDays(txDate, today);
+        }
       }
 
       if (isBefore(txDate, group.startDate)) {
@@ -209,6 +218,7 @@ export function useInstallments() {
     installmentGroups.forEach((group) => {
       const existing = breakdown.get(group.categoryId);
       const category = categories?.find((c) => c.id === group.categoryId);
+      const categoryName = category?.name || "Sem categoria";
 
       if (existing) {
         existing.totalAmount += group.totalAmount;
@@ -217,11 +227,11 @@ export function useInstallments() {
       } else {
         breakdown.set(group.categoryId, {
           categoryId: group.categoryId,
-          categoryName: category?.name || "Sem categoria",
+          categoryName,
           totalAmount: group.totalAmount,
           remainingAmount: group.remainingAmount,
           count: 1,
-          color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+          color: getCategoryColor(categoryName),
         });
       }
     });
@@ -242,6 +252,26 @@ export function useInstallments() {
       paidAmount,
     };
   }, [installmentGroups]);
+
+  const updateCardUsedAmount = async (cardId: string, amountToDecrease: number) => {
+    const { data: card, error: fetchError } = await supabase
+      .from("cards")
+      .select("used_amount")
+      .eq("id", cardId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (card) {
+      const newUsedAmount = Math.max(0, Number(card.used_amount) - amountToDecrease);
+      const { error: updateError } = await supabase
+        .from("cards")
+        .update({ used_amount: newUsedAmount })
+        .eq("id", cardId);
+
+      if (updateError) throw updateError;
+    }
+  };
 
   const anticipateInstallment = useMutation({
     mutationFn: async ({
@@ -269,6 +299,11 @@ export function useInstallments() {
         .eq("id", installmentId);
 
       if (updateError) throw updateError;
+
+      // If the installment was on a card, decrease the used_amount
+      if (installment.card_id) {
+        await updateCardUsedAmount(installment.card_id, installment.amount);
+      }
 
       // Create a debit transaction in the selected bank account
       const { error: debitError } = await supabase.from("transactions").insert({
@@ -298,6 +333,78 @@ export function useInstallments() {
     },
   });
 
+  const anticipateMultipleInstallments = useMutation({
+    mutationFn: async ({
+      installmentIds,
+      bankId,
+      anticipationDate,
+    }: {
+      installmentIds: string[];
+      bankId: string;
+      anticipationDate: Date;
+    }) => {
+      let totalAmount = 0;
+      let cardId: string | null = null;
+      let categoryId: string | null = null;
+      let description = "";
+
+      // Get all installments
+      const { data: installments, error: fetchError } = await supabase
+        .from("transactions")
+        .select("*")
+        .in("id", installmentIds);
+
+      if (fetchError) throw fetchError;
+      if (!installments || installments.length === 0) throw new Error("Parcelas não encontradas");
+
+      // Update all installments to anticipation date
+      const updatePromises = installments.map((installment) => {
+        totalAmount += installment.amount;
+        cardId = installment.card_id;
+        categoryId = installment.category_id;
+        description = installment.description;
+
+        return supabase
+          .from("transactions")
+          .update({ date: anticipationDate.toISOString() })
+          .eq("id", installment.id);
+      });
+
+      await Promise.all(updatePromises);
+
+      // Update card used_amount if applicable
+      if (cardId) {
+        await updateCardUsedAmount(cardId, totalAmount);
+      }
+
+      // Create a single debit transaction
+      const { error: debitError } = await supabase.from("transactions").insert({
+        user_id: user!.id,
+        description: `Antecipação: ${description} (${installments.length} parcelas)`,
+        amount: totalAmount,
+        type: "expense",
+        category_id: categoryId,
+        bank_id: bankId,
+        date: anticipationDate.toISOString(),
+        is_installment: false,
+      });
+
+      if (debitError) throw debitError;
+
+      return { success: true, count: installments.length, total: totalAmount };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["installment-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["cards"] });
+      queryClient.invalidateQueries({ queryKey: ["banks"] });
+      toast.success(`${data.count} parcelas antecipadas com sucesso!`);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao antecipar parcelas: ${error.message}`);
+    },
+  });
+
   const payOffInstallments = useMutation({
     mutationFn: async ({
       groupId,
@@ -322,6 +429,11 @@ export function useInstallments() {
       );
 
       await Promise.all(updatePromises);
+
+      // Update card used_amount if applicable
+      if (group.cardId) {
+        await updateCardUsedAmount(group.cardId, group.remainingAmount);
+      }
 
       // Create a single debit transaction for the total amount
       const { error: debitError } = await supabase.from("transactions").insert({
@@ -358,7 +470,10 @@ export function useInstallments() {
     summary,
     isLoading: isLoadingTransactions,
     anticipateInstallment,
+    anticipateMultipleInstallments,
     payOffInstallments,
     banks,
+    categories,
+    cards,
   };
 }

@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Eye, FastForward, CreditCard } from "lucide-react";
+import { Eye, FastForward, CreditCard, Clock, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { InstallmentGroup } from "@/hooks/useInstallments";
+import { formatCurrency } from "@/lib/utils";
 
 interface InstallmentsListProps {
   groups: InstallmentGroup[];
@@ -20,12 +21,6 @@ export function InstallmentsList({
   onAnticipate,
   onPayOff,
 }: InstallmentsListProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-
   if (groups.length === 0) {
     return (
       <Card>
@@ -40,6 +35,28 @@ export function InstallmentsList({
     );
   }
 
+  const getUrgencyBadge = (daysUntilNextDue?: number) => {
+    if (daysUntilNextDue === undefined) return null;
+    
+    if (daysUntilNextDue <= 0) {
+      return (
+        <Badge variant="destructive" className="text-xs gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Vence hoje
+        </Badge>
+      );
+    }
+    if (daysUntilNextDue <= 7) {
+      return (
+        <Badge variant="secondary" className="text-xs gap-1 bg-yellow-500/20 text-yellow-700 dark:text-yellow-400">
+          <Clock className="h-3 w-3" />
+          Vence em {daysUntilNextDue}d
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-4">
       {groups.map((group) => {
@@ -49,15 +66,23 @@ export function InstallmentsList({
           <Card key={group.id} className="overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{group.description}</CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-lg">{group.description}</CardTitle>
+                    {getUrgencyBadge(group.daysUntilNextDue)}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
                       {group.cardName || group.bankName}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       {group.categoryName}
                     </Badge>
+                    {group.nextDueDate && (
+                      <span className="text-xs text-muted-foreground">
+                        Próxima: {format(group.nextDueDate, "dd/MM", { locale: ptBR })}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">

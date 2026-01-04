@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layers } from "lucide-react";
 import { useInstallments, InstallmentGroup } from "@/hooks/useInstallments";
@@ -12,6 +12,7 @@ import { PayOffDialog } from "@/components/installments/PayOffDialog";
 import { FutureCommitmentCard } from "@/components/installments/FutureCommitmentCard";
 import { EndProjectionCard } from "@/components/installments/EndProjectionCard";
 import { CategoryComparisonCard } from "@/components/installments/CategoryComparisonCard";
+import { InstallmentsFilters } from "@/components/installments/InstallmentsFilters";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function Installments() {
@@ -22,14 +23,84 @@ export default function Installments() {
     summary,
     isLoading,
     anticipateInstallment,
+    anticipateMultipleInstallments,
     payOffInstallments,
     banks,
+    categories,
+    cards,
   } = useInstallments();
 
   const [selectedGroup, setSelectedGroup] = useState<InstallmentGroup | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [anticipateOpen, setAnticipateOpen] = useState(false);
   const [payOffOpen, setPayOffOpen] = useState(false);
+
+  // Filter states
+  const [selectedCardId, setSelectedCardId] = useState("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [sortBy, setSortBy] = useState("endDate");
+
+  const hasActiveFilters = selectedCardId !== "all" || selectedCategoryId !== "all" || sortBy !== "endDate";
+
+  const clearFilters = () => {
+    setSelectedCardId("all");
+    setSelectedCategoryId("all");
+    setSortBy("endDate");
+  };
+
+  // Filter and sort installment groups
+  const filteredGroups = useMemo(() => {
+    let filtered = [...installmentGroups];
+
+    // Apply card filter
+    if (selectedCardId !== "all") {
+      filtered = filtered.filter((g) => g.cardId === selectedCardId);
+    }
+
+    // Apply category filter
+    if (selectedCategoryId !== "all") {
+      filtered = filtered.filter((g) => g.categoryId === selectedCategoryId);
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case "endDate":
+        filtered.sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
+        break;
+      case "amount":
+        filtered.sort((a, b) => b.totalAmount - a.totalAmount);
+        break;
+      case "progress":
+        filtered.sort((a, b) => (b.paidCount / b.totalCount) - (a.paidCount / a.totalCount));
+        break;
+      case "remaining":
+        filtered.sort((a, b) => b.remainingAmount - a.remainingAmount);
+        break;
+    }
+
+    return filtered;
+  }, [installmentGroups, selectedCardId, selectedCategoryId, sortBy]);
+
+  // Get unique cards and categories from installment groups for filter options
+  const filterCards = useMemo(() => {
+    const cardMap = new Map<string, string>();
+    installmentGroups.forEach((g) => {
+      if (g.cardId && g.cardName) {
+        cardMap.set(g.cardId, g.cardName);
+      }
+    });
+    return Array.from(cardMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [installmentGroups]);
+
+  const filterCategories = useMemo(() => {
+    const catMap = new Map<string, string>();
+    installmentGroups.forEach((g) => {
+      if (g.categoryId && g.categoryName) {
+        catMap.set(g.categoryId, g.categoryName);
+      }
+    });
+    return Array.from(catMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [installmentGroups]);
 
   const handleViewDetails = (group: InstallmentGroup) => {
     setSelectedGroup(group);
@@ -52,6 +123,14 @@ export default function Installments() {
     date: Date
   ) => {
     anticipateInstallment.mutate({ installmentId, bankId, anticipationDate: date });
+  };
+
+  const handleConfirmAnticipateMultiple = (
+    installmentIds: string[],
+    bankId: string,
+    date: Date
+  ) => {
+    anticipateMultipleInstallments.mutate({ installmentIds, bankId, anticipationDate: date });
   };
 
   const handleConfirmPayOff = (groupId: string, bankId: string, date: Date) => {
@@ -93,8 +172,22 @@ export default function Installments() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
+          {installmentGroups.length > 0 && (
+            <InstallmentsFilters
+              cards={filterCards}
+              categories={filterCategories}
+              selectedCardId={selectedCardId}
+              selectedCategoryId={selectedCategoryId}
+              sortBy={sortBy}
+              onCardChange={setSelectedCardId}
+              onCategoryChange={setSelectedCategoryId}
+              onSortChange={setSortBy}
+              onClearFilters={clearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+          )}
           <InstallmentsList
-            groups={installmentGroups}
+            groups={filteredGroups}
             onViewDetails={handleViewDetails}
             onAnticipate={handleAnticipate}
             onPayOff={handlePayOff}
@@ -121,6 +214,9 @@ export default function Installments() {
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         group={selectedGroup}
+        banks={banks || []}
+        onAnticipateMultiple={handleConfirmAnticipateMultiple}
+        isAnticipating={anticipateMultipleInstallments.isPending}
       />
 
       <AnticipateDialog
