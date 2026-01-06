@@ -2,13 +2,14 @@ import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, AlertCircle, Calendar, Wallet, History } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertCircle, Calendar, Wallet, History, BarChart3 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalaryInput } from "@/components/budget/SalaryInput";
 import { WalletPieChart } from "@/components/budget/WalletPieChart";
 import { BudgetAreaConfig } from "@/components/budget/BudgetAreaConfig";
 import { AreaDetailsDialog } from "@/components/budget/AreaDetailsDialog";
+import { BudgetVsActualTab } from "@/components/budget/BudgetVsActualTab";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useBudgetAreas } from "@/hooks/useBudgetAreas";
 import { useBudgetAllocation } from "@/hooks/useBudgetAllocation";
@@ -201,10 +202,14 @@ const Budget = () => {
         </div>
 
         <Tabs defaultValue="wallet" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="wallet" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
               Minha Carteira
+            </TabsTrigger>
+            <TabsTrigger value="comparison" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Orçado x Realizado
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
@@ -285,6 +290,19 @@ const Budget = () => {
                 />
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="comparison" className="space-y-6">
+            <BudgetVsActualTab
+              allocations={allocations}
+              totalPlanned={totalPlanned}
+              totalActual={totalActual}
+              salary={effectiveSalary}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              transactions={transactions}
+              categories={categories}
+            />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
