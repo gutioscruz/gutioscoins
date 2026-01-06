@@ -55,6 +55,20 @@ export const useBudgetAreas = () => {
     mutationFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Check if areas already exist to prevent race condition duplicates
+      const { data: existing, error: checkError } = await supabase
+        .from("budget_areas")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (checkError) throw checkError;
+      
+      // If areas already exist, skip initialization
+      if (existing && existing.length > 0) {
+        return;
+      }
+
       const areasToInsert = defaultBudgetAreas.map(area => ({
         user_id: user.id,
         name: area.name,
