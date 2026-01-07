@@ -9,18 +9,24 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Plus, TrendingDown, DollarSign, Calendar, AlertCircle, CheckCircle2, Trash2 } from "lucide-react";
+import { Calculator, Plus, TrendingDown, DollarSign, Calendar, AlertCircle, CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { PaymentFrequency, LoanStatus } from "@/types/finance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type LoanType = 'consignado' | 'fatura_parcelada' | 'pessoal';
+
+const loanTypeLabels: Record<LoanType, string> = {
+  consignado: 'Consignado',
+  fatura_parcelada: 'Fatura Parcelada',
+  pessoal: 'Pessoal',
+};
 
 const Loans = () => {
   const { loans, banks, addLoan, deleteLoan, payLoanInstallment, payLoanInstallmentsAhead } = useFinance();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
-  const [isPayAheadOpen, setIsPayAheadOpen] = useState(false);
-  const [selectedLoanId, setSelectedLoanId] = useState<string>("");
   
   // Form states
   const [name, setName] = useState("");
@@ -31,12 +37,14 @@ const Loans = () => {
   const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>("monthly");
   const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [bankId, setBankId] = useState("");
-  
+  const [loanType, setLoanType] = useState<LoanType>("pessoal");
   // Calculator states
   const [calcPrincipal, setCalcPrincipal] = useState("");
   const [calcInterestRate, setCalcInterestRate] = useState("");
   const [calcInstallments, setCalcInstallments] = useState("");
   const [calcFrequency, setCalcFrequency] = useState<PaymentFrequency>("monthly");
+  
+  // Anticipation state (per loan)
   const [installmentsToPayAhead, setInstallmentsToPayAhead] = useState("");
   
   const calculateMonthlyPayment = (p: number, r: number, n: number, freq: PaymentFrequency) => {
@@ -89,6 +97,7 @@ const Loans = () => {
     setPaymentFrequency("monthly");
     setStartDate(format(new Date(), "yyyy-MM-dd"));
     setBankId("");
+    setLoanType("pessoal");
   };
   
   const handlePayAhead = (loanId: string) => {
@@ -244,13 +253,29 @@ const Loans = () => {
               </DialogHeader>
               
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Financiamento Imobiliário"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome</Label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex: Financiamento Imobiliário"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pessoal">Pessoal</SelectItem>
+                        <SelectItem value="consignado">Consignado</SelectItem>
+                        <SelectItem value="fatura_parcelada">Fatura Parcelada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

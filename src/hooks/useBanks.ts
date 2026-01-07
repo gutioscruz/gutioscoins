@@ -34,6 +34,10 @@ export const useBanks = () => {
           limit: Number(c.limit_amount),
           used: Number(c.used_amount),
           color: c.color,
+          closingDay: c.closing_day || undefined,
+          dueDay: c.due_day || undefined,
+          autoDebit: c.auto_debit || false,
+          autoDebitBankId: c.auto_debit_bank_id || undefined,
         })) || [],
       })) as Bank[];
     },

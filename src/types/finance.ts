@@ -22,6 +22,8 @@ export interface Card {
   color: string;
   closingDay?: number;
   dueDay?: number;
+  autoDebit?: boolean;
+  autoDebitBankId?: string;
 }
 
 export type CardStatementStatus = 'open' | 'closed' | 'paid' | 'partial';
@@ -197,5 +199,7 @@ export const defaultExpenseCategories: Category[] = [
   { id: "10", name: "Lazer", type: "expense", subcategories: ["Streaming", "Cinema", "Viagens", "Hobbies"] },
   { id: "11", name: "Compras", type: "expense", subcategories: ["Roupas", "Eletrônicos", "Casa"] },
   { id: "12", name: "Contas", type: "expense", subcategories: ["Energia", "Água", "Internet", "Telefone"] },
-  { id: "13", name: "Outros Gastos", type: "expense", subcategories: [] },
+  { id: "13", name: "Investimentos", type: "expense", subcategories: ["Ações", "Fundos", "Renda Fixa", "Criptomoedas"] },
+  { id: "14", name: "Empréstimos", type: "expense", subcategories: ["Parcela", "Quitação", "Juros"] },
+  { id: "15", name: "Outros Gastos", type: "expense", subcategories: [] },
 ];
