@@ -77,8 +77,8 @@ interface FinanceContextType {
   addLoan: (loan: Omit<Loan, "id" | "payments" | "totalPaid" | "totalInterest">) => void;
   updateLoan: (id: string, loan: Partial<Omit<Loan, "id">>) => void;
   deleteLoan: (id: string) => void;
-  payLoanInstallment: (loanId: string, installmentNumber: number, paidDate?: Date) => void;
-  payLoanInstallmentsAhead: (loanId: string, numberOfInstallments: number) => void;
+  payLoanInstallment: (params: { loanId: string; installmentId: string; bankId?: string; discount?: number }) => void;
+  payLoanInstallmentsAhead: (params: { loanId: string; count: number; bankId?: string }) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -164,14 +164,6 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     }
   };
 
-  // Loan payment methods (placeholder - needs full implementation)
-  const payLoanInstallment = (loanId: string, installmentNumber: number, paidDate?: Date) => {
-    console.warn('Loan payment not yet implemented with Supabase');
-  };
-
-  const payLoanInstallmentsAhead = (loanId: string, numberOfInstallments: number) => {
-    console.warn('Loan advance payment not yet implemented with Supabase');
-  };
 
   const value: FinanceContextType = {
     // Data
@@ -239,8 +231,8 @@ export const FinanceProvider = ({ children }: FinanceProviderProps) => {
     addLoan: loansHook.addLoan,
     updateLoan: (id, loan) => loansHook.updateLoan({ id, loan }),
     deleteLoan: loansHook.deleteLoan,
-    payLoanInstallment,
-    payLoanInstallmentsAhead,
+    payLoanInstallment: loansHook.payLoanInstallment,
+    payLoanInstallmentsAhead: loansHook.payLoanInstallmentsAhead,
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

@@ -91,12 +91,10 @@ const Loans = () => {
     setBankId("");
   };
   
-  const handlePayAhead = () => {
-    if (!selectedLoanId || !installmentsToPayAhead) return;
-    payLoanInstallmentsAhead(selectedLoanId, parseInt(installmentsToPayAhead));
-    setIsPayAheadOpen(false);
+  const handlePayAhead = (loanId: string) => {
+    if (!loanId || !installmentsToPayAhead) return;
+    payLoanInstallmentsAhead({ loanId, count: parseInt(installmentsToPayAhead) });
     setInstallmentsToPayAhead("");
-    setSelectedLoanId("");
   };
   
   const getStatusColor = (status: LoanStatus) => {
@@ -508,7 +506,7 @@ const Loans = () => {
                           {!payment.paid && (
                             <Button
                               size="sm"
-                              onClick={() => payLoanInstallment(loan.id, payment.installmentNumber)}
+                              onClick={() => payLoanInstallment({ loanId: loan.id, installmentId: payment.id })}
                             >
                               Pagar
                             </Button>
@@ -556,10 +554,7 @@ const Loans = () => {
                           <Button
                             className="w-full"
                             disabled={!installmentsToPayAhead || parseInt(installmentsToPayAhead) <= 0}
-                            onClick={() => {
-                              setSelectedLoanId(loan.id);
-                              handlePayAhead();
-                            }}
+                            onClick={() => handlePayAhead(loan.id)}
                           >
                             Confirmar Antecipação
                           </Button>
