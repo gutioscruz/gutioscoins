@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { BankType, InvestmentType, Card as CardType } from "@/types/finance";
 import { toast } from "sonner";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -69,6 +70,8 @@ const Banks = () => {
     limit: "",
     used: "0",
     color: "#10b981",
+    autoDebit: false,
+    autoDebitBankId: "",
   });
 
   const [investmentFormData, setInvestmentFormData] = useState({
@@ -116,11 +119,18 @@ const Banks = () => {
       return;
     }
 
+    if (cardFormData.autoDebit && !cardFormData.autoDebitBankId) {
+      toast.error("Selecione a conta para débito automático");
+      return;
+    }
+
     const cardData = {
       name: cardFormData.name,
       limit: Number(cardFormData.limit) || 0,
       used: Number(cardFormData.used) || 0,
       color: cardFormData.color,
+      autoDebit: cardFormData.autoDebit,
+      autoDebitBankId: cardFormData.autoDebit ? cardFormData.autoDebitBankId : undefined,
     };
 
     if (editingCardData.cardId) {
@@ -189,6 +199,8 @@ const Banks = () => {
       limit: "",
       used: "0",
       color: "#10b981",
+      autoDebit: false,
+      autoDebitBankId: "",
     });
   };
 
@@ -230,6 +242,8 @@ const Banks = () => {
       limit: card.limit.toString(),
       used: card.used.toString(),
       color: card.color,
+      autoDebit: card.autoDebit || false,
+      autoDebitBankId: card.autoDebitBankId || "",
     });
     setCardDialogOpen(true);
   };
@@ -759,6 +773,43 @@ const Banks = () => {
                     placeholder="#000000"
                   />
                 </div>
+              </div>
+              
+              <div className="space-y-3 p-3 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="auto-debit">Débito Automático</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Paga a fatura automaticamente na data de vencimento
+                    </p>
+                  </div>
+                  <Switch
+                    id="auto-debit"
+                    checked={cardFormData.autoDebit}
+                    onCheckedChange={(checked) => setCardFormData({ ...cardFormData, autoDebit: checked })}
+                  />
+                </div>
+                
+                {cardFormData.autoDebit && (
+                  <div className="space-y-2">
+                    <Label>Conta para Débito</Label>
+                    <Select 
+                      value={cardFormData.autoDebitBankId} 
+                      onValueChange={(value) => setCardFormData({ ...cardFormData, autoDebitBankId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {banks.filter(b => b.type !== 'credit').map(bank => (
+                          <SelectItem key={bank.id} value={bank.id}>
+                            {bank.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <Button onClick={handleSaveCard} className="w-full">
                 {editingCardData?.cardId ? "Salvar Alterações" : "Adicionar"}

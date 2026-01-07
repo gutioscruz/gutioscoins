@@ -178,6 +178,8 @@ export type Database = {
       }
       cards: {
         Row: {
+          auto_debit: boolean | null
+          auto_debit_bank_id: string | null
           bank_id: string
           closing_day: number | null
           color: string
@@ -190,6 +192,8 @@ export type Database = {
           used_amount: number
         }
         Insert: {
+          auto_debit?: boolean | null
+          auto_debit_bank_id?: string | null
           bank_id: string
           closing_day?: number | null
           color: string
@@ -202,6 +206,8 @@ export type Database = {
           used_amount?: number
         }
         Update: {
+          auto_debit?: boolean | null
+          auto_debit_bank_id?: string | null
           bank_id?: string
           closing_day?: number | null
           color?: string
@@ -214,6 +220,13 @@ export type Database = {
           used_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "cards_auto_debit_bank_id_fkey"
+            columns: ["auto_debit_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cards_bank_id_fkey"
             columns: ["bank_id"]
@@ -382,7 +395,9 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          discount_amount: number | null
           due_date: string
+          final_paid_amount: number | null
           id: string
           installment_number: number
           interest: number
@@ -396,7 +411,9 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          discount_amount?: number | null
           due_date: string
+          final_paid_amount?: number | null
           id?: string
           installment_number: number
           interest: number
@@ -410,7 +427,9 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          discount_amount?: number | null
           due_date?: string
+          final_paid_amount?: number | null
           id?: string
           installment_number?: number
           interest?: number
@@ -446,6 +465,7 @@ export type Database = {
           id: string
           installments: number
           interest_rate: number
+          loan_type: string | null
           name: string
           payment_frequency: Database["public"]["Enums"]["payment_frequency"]
           principal: number
@@ -463,6 +483,7 @@ export type Database = {
           id?: string
           installments: number
           interest_rate: number
+          loan_type?: string | null
           name: string
           payment_frequency: Database["public"]["Enums"]["payment_frequency"]
           principal: number
@@ -480,6 +501,7 @@ export type Database = {
           id?: string
           installments?: number
           interest_rate?: number
+          loan_type?: string | null
           name?: string
           payment_frequency?: Database["public"]["Enums"]["payment_frequency"]
           principal?: number
@@ -727,6 +749,7 @@ export type Database = {
         | "emergency-fund"
       investment_type: "stocks" | "funds" | "crypto" | "fixed-income" | "other"
       loan_status: "active" | "paid" | "overdue"
+      loan_type: "consignado" | "fatura_parcelada" | "pessoal"
       payment_frequency: "monthly" | "biweekly" | "weekly"
       recurrence_frequency: "daily" | "weekly" | "monthly" | "yearly"
       transaction_type: "income" | "expense"
@@ -868,6 +891,7 @@ export const Constants = {
       ],
       investment_type: ["stocks", "funds", "crypto", "fixed-income", "other"],
       loan_status: ["active", "paid", "overdue"],
+      loan_type: ["consignado", "fatura_parcelada", "pessoal"],
       payment_frequency: ["monthly", "biweekly", "weekly"],
       recurrence_frequency: ["daily", "weekly", "monthly", "yearly"],
       transaction_type: ["income", "expense"],

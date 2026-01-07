@@ -187,12 +187,36 @@ export const useLoans = () => {
   });
 
   const payLoanInstallment = useMutation({
-    mutationFn: async ({ loanId, installmentId }: { loanId: string; installmentId: string }) => {
+    mutationFn: async ({ 
+      loanId, 
+      installmentId,
+      bankId,
+      discount = 0 
+    }: { 
+      loanId: string; 
+      installmentId: string; 
+      bankId?: string;
+      discount?: number;
+    }) => {
+      // Get the payment details first
+      const { data: paymentData, error: paymentFetchError } = await supabase
+        .from('loan_payments')
+        .select('amount')
+        .eq('id', installmentId)
+        .single();
+      
+      if (paymentFetchError) throw paymentFetchError;
+      
+      const finalAmount = paymentData.amount - discount;
+      
+      // Update the payment as paid
       const { data, error } = await supabase
         .from('loan_payments')
         .update({
           paid: true,
           paid_date: new Date().toISOString(),
+          discount_amount: discount,
+          final_paid_amount: finalAmount,
         })
         .eq('id', installmentId)
         .select()
@@ -200,28 +224,72 @@ export const useLoans = () => {
 
       if (error) throw error;
 
-      // Update loan's total_paid
+      // Get the loan data for creating transaction
       const { data: loanData, error: loanError } = await supabase
         .from('loans')
-        .select('total_paid')
+        .select('total_paid, name, bank_id')
         .eq('id', loanId)
         .single();
 
       if (loanError) throw loanError;
 
+      // Update loan's total_paid with the final amount (after discount)
       const { error: updateError } = await supabase
         .from('loans')
         .update({
-          total_paid: loanData.total_paid + data.amount,
+          total_paid: Number(loanData.total_paid) + finalAmount,
         })
         .eq('id', loanId);
 
       if (updateError) throw updateError;
 
+      // Create a transaction if bankId is provided
+      const transactionBankId = bankId || loanData.bank_id;
+      if (transactionBankId && user) {
+        // Get the "Empréstimos" or "Outros Gastos" category
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('user_id', user.id)
+          .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
+          .limit(1);
+        
+        const categoryId = categories?.[0]?.id;
+        
+        if (categoryId) {
+          const { data: transactionData, error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              description: `Pagamento - ${loanData.name}`,
+              amount: finalAmount,
+              type: 'expense',
+              category_id: categoryId,
+              bank_id: transactionBankId,
+              date: new Date().toISOString(),
+              is_installment: false,
+            })
+            .select()
+            .single();
+
+          if (transactionError) {
+            console.warn('Erro ao criar transação de pagamento:', transactionError);
+          } else if (transactionData) {
+            // Link transaction to the payment
+            await supabase
+              .from('loan_payments')
+              .update({ transaction_id: transactionData.id })
+              .eq('id', installmentId);
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['banks'] });
       toast.success('Parcela paga com sucesso!');
     },
     onError: (error: any) => {
@@ -230,7 +298,7 @@ export const useLoans = () => {
   });
 
   const payLoanInstallmentsAhead = useMutation({
-    mutationFn: async ({ loanId, count }: { loanId: string; count: number }) => {
+    mutationFn: async ({ loanId, count, bankId }: { loanId: string; count: number; bankId?: string }) => {
       const loan = loans.find(l => l.id === loanId);
       if (!loan) throw new Error('Empréstimo não encontrado');
 
@@ -253,10 +321,10 @@ export const useLoans = () => {
 
       const totalAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0);
 
-      // Get current total_paid
+      // Get current loan data
       const { data: loanData, error: loanFetchError } = await supabase
         .from('loans')
-        .select('total_paid')
+        .select('total_paid, name, bank_id')
         .eq('id', loanId)
         .single();
 
@@ -266,16 +334,46 @@ export const useLoans = () => {
       const { error: loanError } = await supabase
         .from('loans')
         .update({
-          total_paid: loanData.total_paid + totalAmount,
+          total_paid: Number(loanData.total_paid) + totalAmount,
         })
         .eq('id', loanId);
 
       if (loanError) throw loanError;
 
+      // Create a transaction for the total if bankId is provided
+      const transactionBankId = bankId || loanData.bank_id;
+      if (transactionBankId && user) {
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('user_id', user.id)
+          .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
+          .limit(1);
+        
+        const categoryId = categories?.[0]?.id;
+        
+        if (categoryId) {
+          await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              description: `Antecipação ${count}x - ${loanData.name}`,
+              amount: totalAmount,
+              type: 'expense',
+              category_id: categoryId,
+              bank_id: transactionBankId,
+              date: new Date().toISOString(),
+              is_installment: false,
+            });
+        }
+      }
+
       return { count, totalAmount };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['banks'] });
       toast.success(`${data.count} parcelas pagas com sucesso!`);
     },
     onError: (error: any) => {

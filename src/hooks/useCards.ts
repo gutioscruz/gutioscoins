@@ -27,6 +27,8 @@ export const useCards = () => {
           limit_amount: validated.limit,
           used_amount: validated.used,
           color: validated.color,
+          auto_debit: card.autoDebit || false,
+          auto_debit_bank_id: card.autoDebitBankId || null,
         })
         .select()
         .single();
@@ -55,6 +57,8 @@ export const useCards = () => {
           limit_amount: validated.limit,
           used_amount: validated.used,
           color: validated.color,
+          auto_debit: card.autoDebit || false,
+          auto_debit_bank_id: card.autoDebitBankId || null,
         })
         .eq('id', cardId)
         .select()
