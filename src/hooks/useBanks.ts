@@ -16,7 +16,8 @@ export const useBanks = () => {
       
       const { data, error } = await supabase
         .from('banks')
-        .select('*, cards(*)')
+        .select('*, cards!cards_bank_id_fkey(*)')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
