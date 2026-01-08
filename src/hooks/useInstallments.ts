@@ -90,7 +90,7 @@ export function useInstallments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cards")
-        .select("*, banks!inner(id, name, user_id)")
+        .select("*, banks!cards_bank_id_fkey!inner(id, name, user_id)")
         .eq("banks.user_id", user!.id);
 
       if (error) throw error;

@@ -21,12 +21,11 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
   { title: "Transações", url: "/", icon: Receipt },
   { title: "Recorrentes", url: "/recurring", icon: Repeat },
-  { title: "Parcelamentos", url: "/installments", icon: Layers },
+  { title: "Compromissos", url: "/compromissos", icon: Layers },
   { title: "Categorias", url: "/categories", icon: Tag },
   { title: "Patrimônio", url: "/banks", icon: Building2 },
   { title: "Orçamento", url: "/budget", icon: PiggyBank },
   { title: "Metas", url: "/goals", icon: Target },
-  { title: "Empréstimos", url: "/loans", icon: TrendingDown },
 ];
 
 export function AppSidebar() {

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useFinance } from "@/contexts/FinanceContext";
 import { CardStatementDialog } from "@/components/cards/CardStatementDialog";
 import { MonthlyStatementsOverview } from "@/components/cards/MonthlyStatementsOverview";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const bankTypeLabels = {
   checking: "Conta Corrente",
@@ -56,6 +57,11 @@ const Banks = () => {
   const [editingCardData, setEditingCardData] = useState<{ bankId: string; cardId: string | null } | null>(null);
   const [editingInvestmentId, setEditingInvestmentId] = useState<string | null>(null);
   const [statementDialogData, setStatementDialogData] = useState<{ card: CardType; bankId: string } | null>(null);
+  
+  // Confirm dialogs state
+  const [deleteBankConfirm, setDeleteBankConfirm] = useState<string | null>(null);
+  const [deleteCardConfirm, setDeleteCardConfirm] = useState<{ bankId: string; cardId: string } | null>(null);
+  const [deleteInvestmentConfirm, setDeleteInvestmentConfirm] = useState<string | null>(null);
   
   const [bankFormData, setBankFormData] = useState({
     name: "",
@@ -110,7 +116,7 @@ const Banks = () => {
 
   const handleDeleteBank = (id: string) => {
     deleteBank(id);
-    toast.success("Banco excluído!");
+    setDeleteBankConfirm(null);
   };
 
   const handleSaveCard = () => {
@@ -146,7 +152,7 @@ const Banks = () => {
 
   const handleDeleteCard = (bankId: string, cardId: string) => {
     deleteCard(bankId, cardId);
-    toast.success("Cartão excluído!");
+    setDeleteCardConfirm(null);
   };
 
   const handleSaveInvestment = () => {
@@ -176,7 +182,7 @@ const Banks = () => {
 
   const handleDeleteInvestment = (id: string) => {
     deleteInvestment(id);
-    toast.success("Investimento excluído!");
+    setDeleteInvestmentConfirm(null);
   };
 
   const resetBankDialog = () => {
@@ -466,7 +472,7 @@ const Banks = () => {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 text-destructive"
-                            onClick={() => handleDeleteBank(bank.id)}
+                            onClick={() => setDeleteBankConfirm(bank.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -518,7 +524,7 @@ const Banks = () => {
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0 text-destructive"
-                                    onClick={() => handleDeleteCard(bank.id, card.id)}
+                                    onClick={() => setDeleteCardConfirm({ bankId: bank.id, cardId: card.id })}
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -688,7 +694,7 @@ const Banks = () => {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive"
-                          onClick={() => handleDeleteInvestment(investment.id)}
+                          onClick={() => setDeleteInvestmentConfirm(investment.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -828,6 +834,39 @@ const Banks = () => {
             banks={banks}
           />
         )}
+
+        {/* Confirm Delete Bank Dialog */}
+        <ConfirmDialog
+          open={!!deleteBankConfirm}
+          onOpenChange={(open) => !open && setDeleteBankConfirm(null)}
+          title="Excluir Banco"
+          description="Tem certeza que deseja excluir este banco? Esta ação não pode ser desfeita. Os cartões associados também serão excluídos."
+          onConfirm={() => deleteBankConfirm && handleDeleteBank(deleteBankConfirm)}
+          confirmText="Excluir"
+          variant="destructive"
+        />
+
+        {/* Confirm Delete Card Dialog */}
+        <ConfirmDialog
+          open={!!deleteCardConfirm}
+          onOpenChange={(open) => !open && setDeleteCardConfirm(null)}
+          title="Excluir Cartão"
+          description="Tem certeza que deseja excluir este cartão? Esta ação não pode ser desfeita."
+          onConfirm={() => deleteCardConfirm && handleDeleteCard(deleteCardConfirm.bankId, deleteCardConfirm.cardId)}
+          confirmText="Excluir"
+          variant="destructive"
+        />
+
+        {/* Confirm Delete Investment Dialog */}
+        <ConfirmDialog
+          open={!!deleteInvestmentConfirm}
+          onOpenChange={(open) => !open && setDeleteInvestmentConfirm(null)}
+          title="Excluir Investimento"
+          description="Tem certeza que deseja excluir este investimento? Esta ação não pode ser desfeita."
+          onConfirm={() => deleteInvestmentConfirm && handleDeleteInvestment(deleteInvestmentConfirm)}
+          confirmText="Excluir"
+          variant="destructive"
+        />
       </main>
     </div>
   );
