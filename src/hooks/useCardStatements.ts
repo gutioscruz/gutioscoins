@@ -343,6 +343,71 @@ export const useCardStatements = (cardId?: string) => {
     },
   });
 
+  // Update statement (edit closing date, due date, etc.)
+  const updateStatement = useMutation({
+    mutationFn: async ({ 
+      statementId, 
+      data 
+    }: { 
+      statementId: string; 
+      data: {
+        closingDate?: Date;
+        dueDate?: Date;
+        status?: string;
+      }
+    }) => {
+      const updatePayload: Record<string, any> = {};
+      
+      if (data.closingDate) {
+        updatePayload.closing_date = format(data.closingDate, 'yyyy-MM-dd');
+      }
+      if (data.dueDate) {
+        updatePayload.due_date = format(data.dueDate, 'yyyy-MM-dd');
+      }
+      if (data.status) {
+        updatePayload.status = data.status;
+      }
+
+      const { data: result, error } = await supabase
+        .from('card_statements')
+        .update(updatePayload)
+        .eq('id', statementId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapRowToStatement(result as CardStatementRow);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
+      toast.success('Fatura atualizada com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar fatura: ${error.message}`);
+    },
+  });
+
+  // Delete statement
+  const deleteStatement = useMutation({
+    mutationFn: async (statementId: string) => {
+      const { error } = await supabase
+        .from('card_statements')
+        .delete()
+        .eq('id', statementId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
+      toast.success('Fatura excluída com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao excluir fatura: ${error.message}`);
+    },
+  });
+
   return {
     statements,
     isLoading,
@@ -351,7 +416,10 @@ export const useCardStatements = (cardId?: string) => {
     closeStatement: closeStatement.mutate,
     payStatement: payStatement.mutate,
     reopenStatement: reopenStatement.mutate,
+    updateStatement: updateStatement.mutate,
+    deleteStatement: deleteStatement.mutate,
     isPayingStatement: payStatement.isPending,
+    isUpdatingStatement: updateStatement.isPending,
   };
 };
 
