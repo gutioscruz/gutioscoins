@@ -191,6 +191,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['banks'] });
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
       toast.success('Transação adicionada com sucesso!');
     },
     onError: (error: any) => {
@@ -239,6 +241,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
       toast.success(`${data.count} transações importadas com sucesso!`);
     },
     onError: (error: any) => {
@@ -301,6 +305,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['banks'] });
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
       toast.success('Transação atualizada com sucesso!');
     },
     onError: (error: any) => {
@@ -350,6 +356,8 @@ export const useTransactions = (filters?: TransactionFilters) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['banks'] });
+      queryClient.invalidateQueries({ queryKey: ['card-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-statements-overview'] });
       toast.success('Transação excluída com sucesso!');
     },
     onError: (error: any) => {
