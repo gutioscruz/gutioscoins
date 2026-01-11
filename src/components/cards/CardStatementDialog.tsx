@@ -3,14 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card as CardUI, CardContent } from '@/components/ui/card';
 import { format, subMonths, addMonths, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CreditCard, Calendar, Receipt, Lock, Unlock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, Calendar, Receipt, Lock, Unlock, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useCardStatements, useStatementTransactions } from '@/hooks/useCardStatements';
 import { Card, Bank, CardStatement } from '@/types/finance';
 import { PayStatementDialog } from './PayStatementDialog';
+import { EditStatementDialog } from './EditStatementDialog';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface CardStatementDialogProps {
   open: boolean;
@@ -44,13 +45,17 @@ export const CardStatementDialog = ({
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [currentStatement, setCurrentStatement] = useState<CardStatement | null>(null);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { 
     statements, 
     isLoading, 
     getOrCreateStatement, 
     closeStatement, 
-    reopenStatement 
+    reopenStatement,
+    updateStatementTotal,
+    deleteStatement,
   } = useCardStatements(card.id);
 
   const { data: transactions = [], isLoading: isLoadingTransactions } = useStatementTransactions(
@@ -96,6 +101,20 @@ export const CardStatementDialog = ({
   const handleReopenStatement = () => {
     if (currentStatement) {
       reopenStatement(currentStatement.id);
+    }
+  };
+
+  const handleRecalculateTotal = () => {
+    if (currentStatement) {
+      updateStatementTotal(currentStatement.id);
+    }
+  };
+
+  const handleDeleteStatement = () => {
+    if (currentStatement) {
+      deleteStatement(currentStatement.id);
+      setDeleteDialogOpen(false);
+      setCurrentStatement(null);
     }
   };
 
@@ -235,24 +254,53 @@ export const CardStatementDialog = ({
 
             {/* Actions */}
             {currentStatement && (
-              <div className="flex gap-2 justify-end pt-2 border-t">
-                {currentStatement.status === 'open' && (
-                  <Button variant="outline" onClick={handleCloseStatement}>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Fechar Fatura
+              <div className="flex flex-wrap gap-2 justify-between pt-2 border-t">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEditDialogOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Editar
                   </Button>
-                )}
-                {(currentStatement.status === 'closed' || currentStatement.status === 'partial') && (
-                  <Button variant="outline" onClick={handleReopenStatement}>
-                    <Unlock className="h-4 w-4 mr-2" />
-                    Reabrir
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRecalculateTotal}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Recalcular
                   </Button>
-                )}
-                {currentStatement.status !== 'paid' && remainingAmount > 0 && (
-                  <Button onClick={() => setPayDialogOpen(true)}>
-                    Pagar Fatura
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Excluir
                   </Button>
-                )}
+                </div>
+                <div className="flex gap-2">
+                  {currentStatement.status === 'open' && (
+                    <Button variant="outline" size="sm" onClick={handleCloseStatement}>
+                      <Lock className="h-4 w-4 mr-1" />
+                      Fechar
+                    </Button>
+                  )}
+                  {(currentStatement.status === 'closed' || currentStatement.status === 'partial') && (
+                    <Button variant="outline" size="sm" onClick={handleReopenStatement}>
+                      <Unlock className="h-4 w-4 mr-1" />
+                      Reabrir
+                    </Button>
+                  )}
+                  {currentStatement.status !== 'paid' && remainingAmount > 0 && (
+                    <Button size="sm" onClick={() => setPayDialogOpen(true)}>
+                      Pagar Fatura
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -268,6 +316,25 @@ export const CardStatementDialog = ({
           banks={banks}
         />
       )}
+
+      {currentStatement && (
+        <EditStatementDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          statement={currentStatement}
+          cardId={card.id}
+        />
+      )}
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Excluir Fatura"
+        description="Tem certeza que deseja excluir esta fatura? As transações associadas não serão excluídas."
+        onConfirm={handleDeleteStatement}
+        confirmText="Excluir"
+        variant="destructive"
+      />
     </>
   );
 };
