@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SummaryCards } from "@/components/finance/SummaryCards";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { InteractivePieChart } from "@/components/finance/InteractivePieChart";
@@ -8,11 +10,31 @@ import { AddTransactionDialog } from "@/components/finance/AddTransactionDialog"
 import { EditTransactionDialog } from "@/components/finance/EditTransactionDialog";
 import { PeriodFilter } from "@/components/finance/PeriodFilter";
 import { BatchTransactionDialog } from "@/components/finance/BatchTransactionDialog";
+import { QuickEntryDialog } from "@/components/finance/QuickEntryDialog";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { useBanks } from "@/hooks/useBanks";
 import { Transaction } from "@/types/finance";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TransactionType } from "@/types/finance";
+import { toast } from "sonner";
 
 interface SelectedCategory {
   name: string;
@@ -85,6 +107,30 @@ const Transactions = () => {
     });
   };
 
+  const handleQuickBatchAdd = async (transactions: Array<{
+    description: string;
+    amount: number;
+    type: TransactionType;
+    categoryId: string;
+    bankId: string;
+    date: Date;
+    isInstallment: boolean;
+  }>) => {
+    for (const tx of transactions) {
+      await addTransaction({
+        description: tx.description,
+        amount: tx.amount,
+        type: tx.type,
+        categoryId: tx.categoryId,
+        bankId: tx.bankId,
+        date: tx.date,
+        isInstallment: tx.isInstallment,
+        installmentNumber: undefined,
+        installmentCount: undefined,
+      });
+    }
+  };
+
   const handleCategorySliceClick = (item: { name: string; color: string; categoryId?: string; subcategory?: string }) => {
     setSelectedCategory({
       name: item.name,
@@ -132,7 +178,11 @@ const Transactions = () => {
               categories={categories}
               banks={banks}
             />
-            <AddTransactionDialog onAddTransaction={addTransaction} categories={categories} banks={banks} />
+            <QuickEntryDialog 
+              onBatchAdd={handleQuickBatchAdd}
+              categories={categories}
+              banks={banks}
+            />
           </div>
         </div>
 
@@ -201,6 +251,15 @@ const Transactions = () => {
           onConfirm={confirmDelete}
           confirmText="Excluir"
         />
+
+        {/* Floating Action Button */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <AddTransactionDialog 
+            onAddTransaction={addTransaction} 
+            categories={categories} 
+            banks={banks} 
+          />
+        </div>
       </main>
     </div>
   );
