@@ -6,8 +6,10 @@ import {
   CreditCard, 
   Landmark, 
   TrendingDown,
-  ChevronRight,
-  Filter
+  Filter,
+  DollarSign,
+  FastForward,
+  Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCommitments, Commitment, CommitmentKind } from "@/hooks/useCommitments";
+import { useInstallments } from "@/hooks/useInstallments";
+import { useLoans } from "@/hooks/useLoans";
+import { useBanks } from "@/hooks/useBanks";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { PayCommitmentDialog } from "@/components/compromissos/PayCommitmentDialog";
+import { CommitmentDetailsDialog } from "@/components/compromissos/CommitmentDetailsDialog";
+import { toast } from "sonner";
 import { 
   BarChart, 
   Bar, 
@@ -32,11 +40,24 @@ const Compromissos = () => {
     activeCommitments, 
     monthlyProjections, 
     summary, 
-    isLoading 
+    isLoading,
+    anticipateMultipleInstallments,
+    payOffInstallments,
+    payLoanInstallmentsAhead,
   } = useCommitments();
+
+  const { installmentGroups } = useInstallments();
+  const { loans, payLoanInstallment } = useLoans();
+  const { banks } = useBanks();
 
   const [kindFilter, setKindFilter] = useState<CommitmentKind | "all">("all");
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+
+  // Dialog states
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredCommitments = activeCommitments
     .filter(c => kindFilter === "all" || c.kind === kindFilter)
@@ -81,6 +102,72 @@ const Compromissos = () => {
       return <Badge variant="secondary">Em {daysUntilDue} dias</Badge>;
     }
     return null;
+  };
+
+  const handlePay = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setPayDialogOpen(true);
+  };
+
+  const handleDetails = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleConfirmPayment = async (data: {
+    commitment: Commitment;
+    count: number;
+    bankId: string;
+    paymentDate: Date;
+    discount: number;
+  }) => {
+    setIsProcessing(true);
+    try {
+      if (data.commitment.kind === "installment") {
+        // Find the installment group
+        const group = installmentGroups.find(g => g.id === data.commitment.originalId);
+        if (!group) throw new Error("Parcelamento não encontrado");
+
+        // Get the pending installment IDs
+        const pendingInstallments = group.installments
+          .filter(i => !i.isPaid)
+          .sort((a, b) => a.installmentNumber - b.installmentNumber)
+          .slice(0, data.count);
+
+        const installmentIds = pendingInstallments.map(i => i.id);
+
+        anticipateMultipleInstallments.mutate({
+          installmentIds,
+          bankId: data.bankId,
+          anticipationDate: data.paymentDate,
+        });
+      } else {
+        // Loan payment
+        payLoanInstallmentsAhead({
+          loanId: data.commitment.originalId,
+          count: data.count,
+          bankId: data.bankId,
+        });
+      }
+
+      toast.success(`${data.count} parcela(s) paga(s) com sucesso!`);
+      setPayDialogOpen(false);
+    } catch (error: any) {
+      toast.error(`Erro ao processar pagamento: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Get related data for details dialog
+  const getInstallmentGroup = (commitment: Commitment | null) => {
+    if (!commitment || commitment.kind !== "installment") return undefined;
+    return installmentGroups.find(g => g.id === commitment.originalId);
+  };
+
+  const getLoan = (commitment: Commitment | null) => {
+    if (!commitment || commitment.kind !== "loan") return undefined;
+    return loans.find(l => l.id === commitment.originalId);
   };
 
   if (isLoading) {
@@ -206,20 +293,20 @@ const Compromissos = () => {
                   return (
                     <Card key={commitment.id} className="hover:bg-muted/50 transition-colors">
                       <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 rounded-lg bg-muted">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 rounded-lg bg-muted mt-1">
                             <Icon className="h-5 w-5 text-muted-foreground" />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-medium truncate">{commitment.title}</p>
                               <Badge variant="outline" className="text-xs">
                                 {getKindLabel(commitment.kind)}
                               </Badge>
                               {getUrgencyBadge(commitment)}
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                               <span>{commitment.origin}</span>
                               {commitment.categoryName && (
                                 <>
@@ -239,6 +326,26 @@ const Compromissos = () => {
                                 style={{ width: `${progress}%` }}
                               />
                             </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-3 pt-3 border-t">
+                              <Button 
+                                variant="default" 
+                                size="sm" 
+                                onClick={() => handlePay(commitment)}
+                              >
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                Pagar
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDetails(commitment)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Detalhes
+                              </Button>
+                            </div>
                           </div>
 
                           <div className="text-right shrink-0">
@@ -256,8 +363,6 @@ const Compromissos = () => {
                               Restam {formatCurrency(commitment.remainingAmount)}
                             </p>
                           </div>
-
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
                       </CardContent>
                     </Card>
@@ -348,6 +453,24 @@ const Compromissos = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Dialogs */}
+        <PayCommitmentDialog
+          open={payDialogOpen}
+          onOpenChange={setPayDialogOpen}
+          commitment={selectedCommitment}
+          banks={banks}
+          onConfirm={handleConfirmPayment}
+          isLoading={isProcessing}
+        />
+
+        <CommitmentDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          commitment={selectedCommitment}
+          installmentGroup={getInstallmentGroup(selectedCommitment)}
+          loan={getLoan(selectedCommitment)}
+        />
       </main>
     </div>
   );

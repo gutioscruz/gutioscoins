@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Target, Lightbulb } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BudgetAreaAllocation, Category, Transaction } from "@/types/finance";
+import { BudgetComparisonPieCharts } from "./BudgetComparisonPieCharts";
 
 interface BudgetVsActualTabProps {
   allocations: BudgetAreaAllocation[];
@@ -146,6 +147,9 @@ export const BudgetVsActualTab = ({
           </CardContent>
         </Card>
       </div>
+
+      {/* Pie Charts Comparison */}
+      <BudgetComparisonPieCharts allocations={allocations} salary={salary} />
 
       {/* Detailed Comparison */}
       <Card>
