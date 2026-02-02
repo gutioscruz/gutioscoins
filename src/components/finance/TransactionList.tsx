@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, LayoutGrid, Table as TableIcon, FastForward } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +7,10 @@ import { Transaction, Category, Bank } from "@/types/finance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TransactionTable } from "./TransactionTable";
+import { BankFilterChips } from "./BankFilterChips";
+import { AnticipateTransactionDialog } from "./AnticipateTransactionDialog";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -14,26 +18,41 @@ interface TransactionListProps {
   banks: Bank[];
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (id: string) => void;
+  selectedBank?: string;
+  onBankChange?: (bankId: string) => void;
+  showBankFilter?: boolean;
 }
 
 type ViewMode = "cards" | "table";
 
-export const TransactionList = ({ transactions, categories, banks, onEdit, onDelete }: TransactionListProps) => {
+export const TransactionList = ({ 
+  transactions, 
+  categories, 
+  banks, 
+  onEdit, 
+  onDelete,
+  selectedBank = "",
+  onBankChange,
+  showBankFilter = true,
+}: TransactionListProps) => {
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("transactionViewMode");
     return (saved as ViewMode) || "cards";
   });
+  const [internalSelectedBank, setInternalSelectedBank] = useState(selectedBank);
 
   useEffect(() => {
     localStorage.setItem("transactionViewMode", viewMode);
   }, [viewMode]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  useEffect(() => {
+    setInternalSelectedBank(selectedBank);
+  }, [selectedBank]);
+
+  const handleBankChange = (bankId: string) => {
+    setInternalSelectedBank(bankId);
+    onBankChange?.(bankId);
   };
 
   const filterButtons = [
@@ -42,15 +61,27 @@ export const TransactionList = ({ transactions, categories, banks, onEdit, onDel
     { label: "Despesas", value: "expense" as const },
   ];
 
-  const filteredTransactions = transactions.filter(
-    (t) => filterType === "all" || t.type === filterType
-  );
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesType = filterType === "all" || t.type === filterType;
+    const matchesBank = !internalSelectedBank || t.bankId === internalSelectedBank;
+    return matchesType && matchesBank;
+  });
+
+  const transactionCount = filteredTransactions.length;
+  const totalCount = transactions.length;
 
   return (
     <Card className="p-6 border-none shadow-md">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Transações Recentes</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-foreground">Transações Recentes</h2>
+            <Badge variant="secondary" className="text-xs">
+              {transactionCount === totalCount
+                ? `${totalCount} transações`
+                : `${transactionCount} de ${totalCount}`}
+            </Badge>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-1">
               {filterButtons.map((button) => (
@@ -78,9 +109,18 @@ export const TransactionList = ({ transactions, categories, banks, onEdit, onDel
           </div>
         </div>
 
+        {/* Bank Filter Chips */}
+        {showBankFilter && banks.length > 0 && (
+          <BankFilterChips
+            banks={banks}
+            selectedBank={internalSelectedBank}
+            onBankChange={handleBankChange}
+          />
+        )}
+
         {viewMode === "table" ? (
           <TransactionTable
-            transactions={transactions}
+            transactions={filteredTransactions}
             categories={categories}
             banks={banks}
             filterType={filterType}
@@ -115,7 +155,7 @@ export const TransactionList = ({ transactions, categories, banks, onEdit, onDel
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{transaction.description}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                           <span>
                             {category?.name}
                             {transaction.subcategory && ` • ${transaction.subcategory}`}
@@ -137,9 +177,9 @@ export const TransactionList = ({ transactions, categories, banks, onEdit, onDel
                           {transaction.isInstallment && transaction.installmentNumber && transaction.installmentCount && (
                             <>
                               <span>•</span>
-                              <span className="text-xs font-medium">
+                              <Badge variant="outline" className="text-xs h-5 px-1.5">
                                 {transaction.installmentNumber}/{transaction.installmentCount}x
-                              </span>
+                              </Badge>
                             </>
                           )}
                         </div>
@@ -153,30 +193,35 @@ export const TransactionList = ({ transactions, categories, banks, onEdit, onDel
                       >
                         {transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount)}
                       </p>
-                      {(onEdit || onDelete) && (
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {onEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => onEdit(transaction)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {onDelete && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive"
-                              onClick={() => onDelete(transaction.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Anticipate button for installments */}
+                        {transaction.isInstallment && transaction.installmentNumber && transaction.installmentCount && (
+                          <AnticipateTransactionDialog
+                            transaction={transaction}
+                            banks={banks}
+                          />
+                        )}
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => onEdit(transaction)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive"
+                            onClick={() => onDelete(transaction.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
