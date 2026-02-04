@@ -731,6 +731,68 @@ export type Database = {
         }
         Relationships: []
       }
+      wishlist_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          priority: string | null
+          purchased_at: string | null
+          status: string | null
+          subcategory: string | null
+          target_date: string | null
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          priority?: string | null
+          purchased_at?: string | null
+          status?: string | null
+          subcategory?: string | null
+          target_date?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          priority?: string | null
+          purchased_at?: string | null
+          status?: string | null
+          subcategory?: string | null
+          target_date?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
