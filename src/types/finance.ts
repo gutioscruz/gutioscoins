@@ -111,6 +111,9 @@ export interface Loan {
   startDate: Date;
   status: LoanStatus;
   bankId?: string;
+  categoryId?: string;
+  subcategory?: string;
+  loanType?: string;
   payments: LoanPayment[];
   totalPaid: number;
   totalInterest: number;

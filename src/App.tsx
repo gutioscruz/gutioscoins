@@ -21,6 +21,7 @@ import Loans from "./pages/Loans";
 import Compromissos from "./pages/Compromissos";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { FinancialAdvisorChat } from "@/components/ai/FinancialAdvisorChat";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +58,8 @@ const App = () => (
                                 <Route path="/compromissos" element={<Compromissos />} />
                                 <Route path="*" element={<NotFound />} />
                               </Routes>
-                            </main>
+                             </main>
+                            <FinancialAdvisorChat />
                           </SidebarInset>
                         </div>
                       </SidebarProvider>
