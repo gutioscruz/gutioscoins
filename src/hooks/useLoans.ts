@@ -34,6 +34,9 @@ export const useLoans = () => {
         totalPaid: Number(l.total_paid),
         totalInterest: Number(l.total_interest),
         bankId: l.bank_id || undefined,
+        categoryId: l.category_id || undefined,
+        subcategory: l.subcategory || undefined,
+        loanType: l.loan_type || 'pessoal',
         payments: l.loan_payments?.map(p => ({
           id: p.id,
           installmentNumber: p.installment_number,
@@ -53,13 +56,11 @@ export const useLoans = () => {
     mutationFn: async (loan: Omit<Loan, 'id' | 'payments' | 'totalPaid' | 'totalInterest'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      // Calculate total interest using loan formula
       const periodsPerYear = loan.paymentFrequency === 'monthly' ? 12 : loan.paymentFrequency === 'biweekly' ? 26 : 52;
       const periodRate = (loan.interestRate / 100) / periodsPerYear;
       const monthlyPayment = loan.principal * (periodRate * Math.pow(1 + periodRate, loan.installments)) / (Math.pow(1 + periodRate, loan.installments) - 1);
       const totalInterest = (monthlyPayment * loan.installments) - loan.principal;
 
-      // Validate input
       const validated = loanSchema.parse({
         name: loan.name,
         description: loan.description,
@@ -72,6 +73,8 @@ export const useLoans = () => {
         totalInterest,
         totalPaid: 0,
         bankId: loan.bankId,
+        categoryId: loan.categoryId,
+        subcategory: loan.subcategory,
       });
 
       const { data: loanData, error: loanError } = await supabase
@@ -89,18 +92,18 @@ export const useLoans = () => {
           bank_id: validated.bankId,
           total_interest: validated.totalInterest,
           total_paid: validated.totalPaid,
+          category_id: validated.categoryId,
+          subcategory: validated.subcategory,
         })
         .select()
         .single();
 
       if (loanError) throw loanError;
 
-      // Generate loan payment installments
       const payments = [];
       for (let i = 1; i <= loan.installments; i++) {
         const dueDate = new Date(loan.startDate);
         
-        // Calculate due date based on frequency
         if (loan.paymentFrequency === 'monthly') {
           dueDate.setMonth(dueDate.getMonth() + i);
         } else if (loan.paymentFrequency === 'biweekly') {
@@ -109,7 +112,6 @@ export const useLoans = () => {
           dueDate.setDate(dueDate.getDate() + (i * 7));
         }
 
-        // Calculate interest and principal for this payment (simplified amortization)
         const interestPayment = totalInterest / loan.installments;
         const principalPayment = loan.principal / loan.installments;
 
@@ -124,7 +126,6 @@ export const useLoans = () => {
         });
       }
 
-      // Insert all payments
       const { error: paymentsError } = await supabase
         .from('loan_payments')
         .insert(payments);
@@ -144,14 +145,18 @@ export const useLoans = () => {
 
   const updateLoan = useMutation({
     mutationFn: async ({ id, loan }: { id: string; loan: Partial<Loan> }) => {
+      const updateData: Record<string, any> = {};
+      if (loan.name !== undefined) updateData.name = loan.name;
+      if (loan.description !== undefined) updateData.description = loan.description;
+      if (loan.status !== undefined) updateData.status = loan.status;
+      if (loan.totalPaid !== undefined) updateData.total_paid = loan.totalPaid;
+      if (loan.bankId !== undefined) updateData.bank_id = loan.bankId;
+      if (loan.categoryId !== undefined) updateData.category_id = loan.categoryId;
+      if (loan.subcategory !== undefined) updateData.subcategory = loan.subcategory;
+
       const { data, error } = await supabase
         .from('loans')
-        .update({
-          name: loan.name,
-          description: loan.description,
-          status: loan.status,
-          total_paid: loan.totalPaid,
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -191,14 +196,15 @@ export const useLoans = () => {
       loanId, 
       installmentId,
       bankId,
-      discount = 0 
+      discount = 0,
+      createTransaction = true,
     }: { 
       loanId: string; 
       installmentId: string; 
       bankId?: string;
       discount?: number;
+      createTransaction?: boolean;
     }) => {
-      // Get the payment details first
       const { data: paymentData, error: paymentFetchError } = await supabase
         .from('loan_payments')
         .select('amount')
@@ -209,7 +215,6 @@ export const useLoans = () => {
       
       const finalAmount = paymentData.amount - discount;
       
-      // Update the payment as paid
       const { data, error } = await supabase
         .from('loan_payments')
         .update({
@@ -224,16 +229,14 @@ export const useLoans = () => {
 
       if (error) throw error;
 
-      // Get the loan data for creating transaction
       const { data: loanData, error: loanError } = await supabase
         .from('loans')
-        .select('total_paid, name, bank_id')
+        .select('total_paid, name, bank_id, category_id, subcategory')
         .eq('id', loanId)
         .single();
 
       if (loanError) throw loanError;
 
-      // Update loan's total_paid with the final amount (after discount)
       const { error: updateError } = await supabase
         .from('loans')
         .update({
@@ -243,18 +246,21 @@ export const useLoans = () => {
 
       if (updateError) throw updateError;
 
-      // Create a transaction if bankId is provided
+      // Only create transaction if explicitly requested and bankId is provided
       const transactionBankId = bankId || loanData.bank_id;
-      if (transactionBankId && user) {
-        // Get the "Empréstimos" or "Outros Gastos" category
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('user_id', user.id)
-          .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
-          .limit(1);
+      if (createTransaction && transactionBankId && user) {
+        // Use the loan's category_id if available, otherwise fallback to "Empréstimos"
+        let categoryId = loanData.category_id;
         
-        const categoryId = categories?.[0]?.id;
+        if (!categoryId) {
+          const { data: categories } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('user_id', user.id)
+            .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
+            .limit(1);
+          categoryId = categories?.[0]?.id;
+        }
         
         if (categoryId) {
           const { data: transactionData, error: transactionError } = await supabase
@@ -265,6 +271,7 @@ export const useLoans = () => {
               amount: finalAmount,
               type: 'expense',
               category_id: categoryId,
+              subcategory: loanData.subcategory,
               bank_id: transactionBankId,
               date: new Date().toISOString(),
               is_installment: false,
@@ -275,7 +282,6 @@ export const useLoans = () => {
           if (transactionError) {
             console.warn('Erro ao criar transação de pagamento:', transactionError);
           } else if (transactionData) {
-            // Link transaction to the payment
             await supabase
               .from('loan_payments')
               .update({ transaction_id: transactionData.id })
@@ -298,7 +304,19 @@ export const useLoans = () => {
   });
 
   const payLoanInstallmentsAhead = useMutation({
-    mutationFn: async ({ loanId, count, bankId }: { loanId: string; count: number; bankId?: string }) => {
+    mutationFn: async ({ 
+      loanId, 
+      count, 
+      bankId,
+      discount = 0,
+      createTransaction = true,
+    }: { 
+      loanId: string; 
+      count: number; 
+      bankId?: string;
+      discount?: number;
+      createTransaction?: boolean;
+    }) => {
       const loan = loans.find(l => l.id === loanId);
       if (!loan) throw new Error('Empréstimo não encontrado');
 
@@ -320,37 +338,39 @@ export const useLoans = () => {
       if (error) throw error;
 
       const totalAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0);
+      const finalAmount = totalAmount - discount;
 
-      // Get current loan data
       const { data: loanData, error: loanFetchError } = await supabase
         .from('loans')
-        .select('total_paid, name, bank_id')
+        .select('total_paid, name, bank_id, category_id, subcategory')
         .eq('id', loanId)
         .single();
 
       if (loanFetchError) throw loanFetchError;
 
-      // Update loan's total_paid
       const { error: loanError } = await supabase
         .from('loans')
         .update({
-          total_paid: Number(loanData.total_paid) + totalAmount,
+          total_paid: Number(loanData.total_paid) + finalAmount,
         })
         .eq('id', loanId);
 
       if (loanError) throw loanError;
 
-      // Create a transaction for the total if bankId is provided
+      // Only create transaction if explicitly requested
       const transactionBankId = bankId || loanData.bank_id;
-      if (transactionBankId && user) {
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('user_id', user.id)
-          .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
-          .limit(1);
+      if (createTransaction && transactionBankId && user) {
+        let categoryId = loanData.category_id;
         
-        const categoryId = categories?.[0]?.id;
+        if (!categoryId) {
+          const { data: categories } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('user_id', user.id)
+            .or('name.ilike.%empréstimo%,name.ilike.%outros gastos%')
+            .limit(1);
+          categoryId = categories?.[0]?.id;
+        }
         
         if (categoryId) {
           await supabase
@@ -358,9 +378,10 @@ export const useLoans = () => {
             .insert({
               user_id: user.id,
               description: `Antecipação ${count}x - ${loanData.name}`,
-              amount: totalAmount,
+              amount: finalAmount,
               type: 'expense',
               category_id: categoryId,
+              subcategory: loanData.subcategory,
               bank_id: transactionBankId,
               date: new Date().toISOString(),
               is_installment: false,
@@ -368,7 +389,7 @@ export const useLoans = () => {
         }
       }
 
-      return { count, totalAmount };
+      return { count, totalAmount: finalAmount };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });

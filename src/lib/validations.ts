@@ -114,6 +114,8 @@ export const loanSchema = z.object({
   totalInterest: z.number().min(0).max(999999999),
   totalPaid: z.number().min(0).max(999999999),
   bankId: uuidSchema.optional(),
+  categoryId: uuidSchema.optional(),
+  subcategory: z.string().trim().max(100).optional(),
 });
 
 export type LoanInput = z.infer<typeof loanSchema>;

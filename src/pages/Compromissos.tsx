@@ -46,7 +46,8 @@ const Compromissos = () => {
     payLoanInstallmentsAhead,
   } = useCommitments();
 
-  const { installmentGroups } = useInstallments();
+  const useInstallmentsHook = useInstallments();
+  const { installmentGroups } = useInstallmentsHook;
   const { loans, payLoanInstallment } = useLoans();
   const { banks } = useBanks();
 
@@ -120,15 +121,14 @@ const Compromissos = () => {
     bankId: string;
     paymentDate: Date;
     discount: number;
+    createTransaction: boolean;
   }) => {
     setIsProcessing(true);
     try {
       if (data.commitment.kind === "installment") {
-        // Find the installment group
         const group = installmentGroups.find(g => g.id === data.commitment.originalId);
         if (!group) throw new Error("Parcelamento não encontrado");
 
-        // Get the pending installment IDs
         const pendingInstallments = group.installments
           .filter(i => !i.isPaid)
           .sort((a, b) => a.installmentNumber - b.installmentNumber)
@@ -136,17 +136,27 @@ const Compromissos = () => {
 
         const installmentIds = pendingInstallments.map(i => i.id);
 
-        anticipateMultipleInstallments.mutate({
-          installmentIds,
-          bankId: data.bankId,
-          anticipationDate: data.paymentDate,
-        });
+        if (data.createTransaction && data.bankId) {
+          anticipateMultipleInstallments.mutate({
+            installmentIds,
+            bankId: data.bankId,
+            anticipationDate: data.paymentDate,
+          });
+        } else {
+          // Just mark as paid without creating transaction
+          const { markInstallmentsPaid } = useInstallmentsHook;
+          markInstallmentsPaid.mutate({
+            installmentIds,
+            paymentDate: data.paymentDate,
+          });
+        }
       } else {
-        // Loan payment
         payLoanInstallmentsAhead({
           loanId: data.commitment.originalId,
           count: data.count,
-          bankId: data.bankId,
+          bankId: data.createTransaction ? data.bankId : undefined,
+          discount: data.discount,
+          createTransaction: data.createTransaction,
         });
       }
 

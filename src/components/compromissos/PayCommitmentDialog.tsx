@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { CreditCard, Landmark, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Commitment } from "@/hooks/useCommitments";
 import { Bank } from "@/types/finance";
 
@@ -36,6 +35,7 @@ interface PayCommitmentDialogProps {
     bankId: string;
     paymentDate: Date;
     discount: number;
+    createTransaction: boolean;
   }) => void;
   isLoading?: boolean;
 }
@@ -59,6 +59,7 @@ export const PayCommitmentDialog = ({
   const [bankId, setBankId] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [discount, setDiscount] = useState("");
+  const [createTransaction, setCreateTransaction] = useState(false);
 
   const maxCount = commitment?.remainingCount || 1;
   
@@ -71,14 +72,17 @@ export const PayCommitmentDialog = ({
   const finalAmount = totalAmount - discountValue;
 
   const handleSubmit = () => {
-    if (!commitment || !bankId) return;
+    if (!commitment) return;
+    // bankId is only required when createTransaction is true
+    if (createTransaction && !bankId) return;
 
     onConfirm({
       commitment,
       count,
-      bankId,
+      bankId: createTransaction ? bankId : "",
       paymentDate: new Date(paymentDate),
       discount: discountValue,
+      createTransaction,
     });
   };
 
@@ -88,6 +92,7 @@ export const PayCommitmentDialog = ({
       setBankId("");
       setPaymentDate(new Date().toISOString().split("T")[0]);
       setDiscount("");
+      setCreateTransaction(false);
     }
     onOpenChange(isOpen);
   };
@@ -143,28 +148,50 @@ export const PayCommitmentDialog = ({
             </div>
           </div>
 
-          {/* Bank Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="bank">Débito de qual conta?</Label>
-            <Select value={bankId} onValueChange={setBankId}>
-              <SelectTrigger id="bank">
-                <SelectValue placeholder="Selecione a conta" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: bank.color }}
-                      />
-                      {bank.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Create Transaction Checkbox */}
+          <div className="flex items-center space-x-2 p-3 border rounded-lg">
+            <Checkbox
+              id="createTransaction"
+              checked={createTransaction}
+              onCheckedChange={(checked) => setCreateTransaction(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <label
+                htmlFor="createTransaction"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Registrar transação financeira
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Cria um débito na conta selecionada. Desmarque para apenas marcar como pago.
+              </p>
+            </div>
           </div>
+
+          {/* Bank Selection - only shown when createTransaction is true */}
+          {createTransaction && (
+            <div className="space-y-2">
+              <Label htmlFor="bank">Débito de qual conta?</Label>
+              <Select value={bankId} onValueChange={setBankId}>
+                <SelectTrigger id="bank">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: bank.color }}
+                        />
+                        {bank.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Payment Date */}
           <div className="space-y-2">
@@ -217,8 +244,15 @@ export const PayCommitmentDialog = ({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={!bankId || isLoading}>
-            {isLoading ? "Processando..." : "Confirmar Pagamento"}
+          <Button
+            onClick={handleSubmit}
+            disabled={(createTransaction && !bankId) || isLoading}
+          >
+            {isLoading
+              ? "Processando..."
+              : createTransaction
+                ? "Confirmar Pagamento"
+                : "Marcar como Pago"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -460,6 +460,7 @@ export type Database = {
       loans: {
         Row: {
           bank_id: string | null
+          category_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -471,6 +472,7 @@ export type Database = {
           principal: number
           start_date: string
           status: Database["public"]["Enums"]["loan_status"]
+          subcategory: string | null
           total_interest: number
           total_paid: number
           updated_at: string
@@ -478,6 +480,7 @@ export type Database = {
         }
         Insert: {
           bank_id?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -489,6 +492,7 @@ export type Database = {
           principal: number
           start_date: string
           status?: Database["public"]["Enums"]["loan_status"]
+          subcategory?: string | null
           total_interest: number
           total_paid?: number
           updated_at?: string
@@ -496,6 +500,7 @@ export type Database = {
         }
         Update: {
           bank_id?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -507,6 +512,7 @@ export type Database = {
           principal?: number
           start_date?: string
           status?: Database["public"]["Enums"]["loan_status"]
+          subcategory?: string | null
           total_interest?: number
           total_paid?: number
           updated_at?: string
@@ -518,6 +524,13 @@ export type Database = {
             columns: ["bank_id"]
             isOneToOne: false
             referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]

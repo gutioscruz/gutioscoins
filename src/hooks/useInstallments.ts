@@ -166,7 +166,6 @@ export function useInstallments() {
         group.remainingCount += 1;
         group.remainingAmount += tx.amount;
         
-        // Track next due date
         if (!group.nextDueDate || isBefore(txDate, group.nextDueDate)) {
           group.nextDueDate = txDate;
           group.daysUntilNextDue = differenceInDays(txDate, today);
@@ -283,7 +282,6 @@ export function useInstallments() {
       bankId: string;
       anticipationDate: Date;
     }) => {
-      // Get the installment transaction
       const { data: installment, error: fetchError } = await supabase
         .from("transactions")
         .select("*")
@@ -292,7 +290,6 @@ export function useInstallments() {
 
       if (fetchError) throw fetchError;
 
-      // Update the installment date to anticipation date
       const { error: updateError } = await supabase
         .from("transactions")
         .update({ date: anticipationDate.toISOString() })
@@ -300,12 +297,10 @@ export function useInstallments() {
 
       if (updateError) throw updateError;
 
-      // If the installment was on a card, decrease the used_amount
       if (installment.card_id) {
         await updateCardUsedAmount(installment.card_id, installment.amount);
       }
 
-      // Create a debit transaction in the selected bank account
       const { error: debitError } = await supabase.from("transactions").insert({
         user_id: user!.id,
         description: `Antecipação: ${installment.description} (${installment.installment_number}/${installment.installment_count})`,
@@ -348,7 +343,6 @@ export function useInstallments() {
       let categoryId: string | null = null;
       let description = "";
 
-      // Get all installments
       const { data: installments, error: fetchError } = await supabase
         .from("transactions")
         .select("*")
@@ -357,7 +351,6 @@ export function useInstallments() {
       if (fetchError) throw fetchError;
       if (!installments || installments.length === 0) throw new Error("Parcelas não encontradas");
 
-      // Update all installments to anticipation date
       const updatePromises = installments.map((installment) => {
         totalAmount += installment.amount;
         cardId = installment.card_id;
@@ -372,12 +365,10 @@ export function useInstallments() {
 
       await Promise.all(updatePromises);
 
-      // Update card used_amount if applicable
       if (cardId) {
         await updateCardUsedAmount(cardId, totalAmount);
       }
 
-      // Create a single debit transaction
       const { error: debitError } = await supabase.from("transactions").insert({
         user_id: user!.id,
         description: `Antecipação: ${description} (${installments.length} parcelas)`,
@@ -420,7 +411,6 @@ export function useInstallments() {
 
       const pendingInstallments = group.installments.filter((i) => !i.isPaid);
 
-      // Update all pending installments to the payment date
       const updatePromises = pendingInstallments.map((installment) =>
         supabase
           .from("transactions")
@@ -430,12 +420,10 @@ export function useInstallments() {
 
       await Promise.all(updatePromises);
 
-      // Update card used_amount if applicable
       if (group.cardId) {
         await updateCardUsedAmount(group.cardId, group.remainingAmount);
       }
 
-      // Create a single debit transaction for the total amount
       const { error: debitError } = await supabase.from("transactions").insert({
         user_id: user!.id,
         description: `Quitação: ${group.description} (${pendingInstallments.length} parcelas)`,
@@ -463,6 +451,35 @@ export function useInstallments() {
     },
   });
 
+  const markInstallmentsPaid = useMutation({
+    mutationFn: async ({
+      installmentIds,
+      paymentDate,
+    }: {
+      installmentIds: string[];
+      paymentDate: Date;
+    }) => {
+      const updatePromises = installmentIds.map((id) =>
+        supabase
+          .from("transactions")
+          .update({ date: paymentDate.toISOString() })
+          .eq("id", id)
+      );
+
+      await Promise.all(updatePromises);
+
+      return { count: installmentIds.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["installment-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success(`${data.count} parcela(s) marcada(s) como paga(s)!`);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao marcar parcelas: ${error.message}`);
+    },
+  });
+
   return {
     installmentGroups,
     monthlyCommitments,
@@ -472,6 +489,7 @@ export function useInstallments() {
     anticipateInstallment,
     anticipateMultipleInstallments,
     payOffInstallments,
+    markInstallmentsPaid,
     banks,
     categories,
     cards,
