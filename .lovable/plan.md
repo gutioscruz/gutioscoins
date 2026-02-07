@@ -1,254 +1,182 @@
 
-## Plano de Implementacao: Lista de Desejos com Projecao Financeira
+## Plano: IA Consultor Financeiro + Melhorias em Parcelamentos e Emprestimos
 
 ### Visao Geral
 
-Implementar uma funcionalidade de "Lista de Desejos" (Wishlist) integrada ao painel de Metas, onde o usuario pode adicionar itens desejados com preco, categoria e subcategoria. O sistema calculara automaticamente uma projecao financeira indicando o melhor momento para comprar cada item.
+Duas frentes de trabalho:
+1. **Consultor Financeiro com IA** - Chat integrado ao app que analisa seus dados financeiros em tempo real
+2. **Melhorias em Parcelamentos e Emprestimos** - CRUD completo, pagamento simplificado e integracao com categorias/orcamento
 
 ---
 
-### Modelo de Dados
+## PARTE 1: Consultor Financeiro com IA
 
-**Nova tabela: `wishlist_items`**
+### Arquitetura
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `id` | uuid | Identificador unico |
-| `user_id` | uuid | Referencia ao usuario |
-| `name` | text | Nome do item desejado |
-| `description` | text | Descricao opcional |
-| `price` | numeric | Preco estimado do item |
-| `category_id` | uuid | Categoria (para analise de gastos) |
-| `subcategory` | text | Subcategoria opcional |
-| `priority` | text | Prioridade: 'low', 'medium', 'high' |
-| `url` | text | Link opcional para o produto |
-| `image_url` | text | Imagem opcional do item |
-| `status` | text | Status: 'pending', 'purchased', 'cancelled' |
-| `target_date` | date | Data alvo desejada (opcional) |
-| `purchased_at` | timestamp | Data da compra (se comprado) |
-| `created_at` | timestamp | Data de criacao |
-| `updated_at` | timestamp | Data de atualizacao |
+O app ja roda em Lovable Cloud, que fornece acesso ao Lovable AI (modelos Gemini) sem necessidade de chave de API. A implementacao sera:
 
-**Politicas RLS:**
-- Usuarios podem apenas ver/criar/editar/deletar seus proprios itens
+1. **Edge Function** (`supabase/functions/financial-advisor/index.ts`) - Recebe os dados financeiros do usuario e envia para a Lovable AI com um system prompt especializado em consultoria financeira
+2. **Interface de Chat** - Widget flutuante acessivel de qualquer pagina, com streaming de respostas em tempo real
 
----
+### Edge Function - financial-advisor
 
-### Logica de Projecao Financeira
+- Endpoint que recebe `messages` (historico do chat) + `financialContext` (dados do usuario)
+- System prompt em portugues com especialidade em financas pessoais brasileiras
+- Modelo: `google/gemini-3-flash-preview` (rapido e eficiente)
+- Streaming SSE para respostas em tempo real
+- Tratamento de erros 429 (rate limit) e 402 (creditos)
 
-O sistema calculara o "melhor momento para comprar" baseado em:
+### System Prompt do Consultor
 
-1. **Saldo Disponivel Mensal**
-   - Receita mensal (salario configurado ou calculado automaticamente)
-   - Menos: Despesas fixas (transacoes recorrentes)
-   - Menos: Compromissos mensais (parcelas + emprestimos)
-   - Igual: Saldo livre mensal
+O prompt incluira instrucoes para:
+- Analisar padroes de gastos e identificar oportunidades de economia
+- Sugerir estrategias de quitacao de dividas (avalanche vs bola de neve)
+- Avaliar momento ideal para compras da lista de desejos
+- Orientar sobre alocacao de orcamento baseado nas areas configuradas
+- Responder em portugues com valores em R$
+- Ser didatico e acessivel, evitando jargoes financeiros complexos
 
-2. **Regra do Orcamento**
-   - Verificar a categoria do item na area de orcamento
-   - Calcular quanto sobra nessa area apos gastos realizados
-   - Projetar acumulo mensal para essa categoria
+### Dados Financeiros como Contexto
 
-3. **Calculo da Data de Compra**
-   - Se o preco do item cabe no saldo livre atual: "Pode comprar agora"
-   - Caso contrario: Calcular quantos meses de economia serao necessarios
-   - Considerar prioridade para ordenar sugestoes
+O frontend coletara e enviara ao backend:
+- Resumo mensal (receita, despesa, saldo)
+- Compromissos ativos (parcelas + emprestimos)
+- Orcamento configurado (areas e porcentagens)
+- Metas financeiras ativas
+- Lista de desejos pendentes
+- Top categorias de gasto
 
-4. **Insights Inteligentes**
-   - "Voce pode comprar este item em X meses economizando R$ Y/mes"
-   - "Baseado no seu padrao de gastos, abril seria o melhor mes"
-   - "Se reduzir gastos em [categoria], pode antecipar para [data]"
+### Interface do Chat
 
----
+- **Widget flutuante** no canto inferior direito com icone de bot
+- **Painel deslizante** que abre sobre o conteudo
+- **Sugestoes rapidas** pre-definidas: "Como reduzir meus gastos?", "Devo antecipar parcelas?", "Quando posso comprar X?"
+- **Streaming de resposta** token por token
+- **Historico** mantido durante a sessao (em memoria, sem persistencia)
 
 ### Arquivos a Criar
 
 | Arquivo | Descricao |
 |---------|-----------|
-| `src/hooks/useWishlist.ts` | Hook para CRUD da lista de desejos |
-| `src/components/wishlist/WishlistCard.tsx` | Card de item da lista |
-| `src/components/wishlist/WishlistDialog.tsx` | Dialog para adicionar/editar item |
-| `src/components/wishlist/WishlistProjection.tsx` | Componente de projecao financeira |
-| `src/components/wishlist/WishlistInsights.tsx` | Componente de insights inteligentes |
-
----
+| `supabase/functions/financial-advisor/index.ts` | Edge function com Lovable AI |
+| `src/components/ai/FinancialAdvisorChat.tsx` | Componente principal do chat |
+| `src/components/ai/ChatMessage.tsx` | Renderizacao de mensagens |
+| `src/components/ai/QuickSuggestions.tsx` | Botoes de sugestoes rapidas |
+| `src/hooks/useFinancialAdvisor.ts` | Hook para streaming e estado do chat |
 
 ### Arquivos a Modificar
 
 | Arquivo | Modificacao |
 |---------|-------------|
-| `src/pages/Goals.tsx` | Adicionar aba/secao para Lista de Desejos |
-| `src/types/finance.ts` | Adicionar interface `WishlistItem` e tipos relacionados |
-| `src/lib/validations.ts` | Adicionar schema de validacao `wishlistItemSchema` |
-| `src/contexts/FinanceContext.tsx` | Expor hook de wishlist (opcional, pode usar direto) |
+| `src/App.tsx` | Adicionar widget flutuante do chat |
+| `supabase/config.toml` | Registrar a nova edge function |
 
 ---
 
-### Interface do Usuario
+## PARTE 2: Melhorias em Parcelamentos e Emprestimos
 
-**Pagina de Metas (Goals) - Nova Estrutura:**
-
-```
-text
-[Tabs]
-- Metas Financeiras (atual)
-- Lista de Desejos (novo)
-
-[Lista de Desejos]
-+------------------------------------------+
-| [+ Novo Item]                   [Filtros] |
-+------------------------------------------+
-| Item: iPhone 15 Pro              R$ 8.999 |
-| Categoria: Compras > Eletronicos         |
-| Prioridade: Alta                          |
-| Projecao: Pode comprar em Maio/2026      |
-| [Economizando R$ 1.800/mes por 5 meses]  |
-|                        [Editar] [Comprei!]|
-+------------------------------------------+
-| Item: Viagem Portugal           R$ 15.000 |
-| Categoria: Lazer > Viagens               |
-| Prioridade: Media                         |
-| Projecao: Pode comprar em Outubro/2026   |
-| [Reduzindo gastos em Lazer: Agosto/2026] |
-|                        [Editar] [Comprei!]|
-+------------------------------------------+
-```
-
-**Dialog de Adicionar Item:**
-
-- Nome do item (obrigatorio)
-- Preco (obrigatorio)
-- Categoria (select com categorias de despesa)
-- Subcategoria (opcional)
-- Prioridade (baixa/media/alta)
-- Data alvo (opcional - para itens com prazo)
-- Link do produto (opcional)
-- Descricao/Notas (opcional)
-
----
-
-### Calculo de Projecao
-
-**Hook `useWishlistProjection`:**
-
-```typescript
-interface WishlistProjection {
-  canBuyNow: boolean;
-  monthsToSave: number;
-  monthlySavingsNeeded: number;
-  suggestedDate: Date;
-  alternativeDate?: Date; // Se reduzir gastos
-  potentialSavings: number; // Economia possivel na categoria
-  tips: string[];
-}
-```
-
-**Dados utilizados:**
-- `useUserSettings` - Salario mensal
-- `useTransactions` - Historico de gastos
-- `useCommitments` - Compromissos futuros
-- `useBudgetAreas` - Orcamento por categoria
-- `useBudgetAllocation` - Alocacao real vs planejada
-
----
-
-### Fluxo do Usuario
-
-1. Usuario acessa "Metas" e clica na aba "Lista de Desejos"
-2. Clica em "Novo Item" e preenche os dados
-3. Sistema calcula automaticamente a projecao
-4. Card mostra:
-   - Informacoes do item
-   - Projecao de quando pode comprar
-   - Sugestoes de economia
-5. Ao comprar, usuario clica "Comprei!" que:
-   - Pergunta se quer registrar a transacao
-   - Move item para "Comprados"
-   - Atualiza estatisticas
-
----
-
-### Detalhes Tecnicos
+### 2.1 - Adicionar Categorias e Subcategorias aos Emprestimos
 
 **Migracao SQL:**
+- Adicionar coluna `category_id` (uuid, FK para categories, nullable) na tabela `loans`
+- Adicionar coluna `subcategory` (text, nullable) na tabela `loans`
 
-```sql
-CREATE TABLE wishlist_items (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id),
-  name text NOT NULL,
-  description text,
-  price numeric NOT NULL,
-  category_id uuid REFERENCES categories(id),
-  subcategory text,
-  priority text DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
-  url text,
-  image_url text,
-  status text DEFAULT 'pending' CHECK (status IN ('pending', 'purchased', 'cancelled')),
-  target_date date,
-  purchased_at timestamptz,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+**Impacto no codigo:**
+- `src/hooks/useLoans.ts` - Incluir category_id e subcategory no CRUD
+- `src/pages/Loans.tsx` - Adicionar seletores de categoria/subcategoria no formulario de criacao/edicao
+- `src/hooks/useCommitments.ts` - Carregar nome da categoria para emprestimos (igual ja faz para parcelamentos)
+- **Orcamento**: Os emprestimos com categoria passam a aparecer automaticamente no modulo de Orcamento, pois as transacoes de pagamento ja sao criadas com a categoria correta
 
--- RLS Policies
-ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
+### 2.2 - Pagamento Simplificado (sem exigir fonte)
 
-CREATE POLICY "Users can view own wishlist items"
-  ON wishlist_items FOR SELECT
-  USING (auth.uid() = user_id);
+Atualmente, `PayCommitmentDialog` e os hooks de pagamento sempre exigem `bankId`. Precisamos:
 
-CREATE POLICY "Users can insert own wishlist items"
-  ON wishlist_items FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+**Para Parcelamentos:**
+- Criar nova mutation `markInstallmentsPaid` no `useInstallments` que apenas marca as parcelas como pagas (movendo a data para hoje) sem criar transacao de debito
+- O usuario escolhe: "Registrar pagamento" (com banco) ou "Apenas marcar como pago" (sem banco)
 
-CREATE POLICY "Users can update own wishlist items"
-  ON wishlist_items FOR UPDATE
-  USING (auth.uid() = user_id);
+**Para Emprestimos:**
+- Modificar `payLoanInstallment` para aceitar `bankId` como verdadeiramente opcional
+- Se `bankId` nao for fornecido: marca como pago, atualiza `total_paid`, mas NAO cria transacao
+- Se `bankId` for fornecido: comportamento atual (marca + cria transacao)
 
-CREATE POLICY "Users can delete own wishlist items"
-  ON wishlist_items FOR DELETE
-  USING (auth.uid() = user_id);
-```
+**Mudancas na UI:**
+- `PayCommitmentDialog` - Campo banco se torna opcional com checkbox "Registrar transacao financeira"
+- Quando desmarcado, esconde o seletor de banco
+- Botao muda para "Marcar como Pago" vs "Confirmar Pagamento"
 
-**Tipo TypeScript:**
+### 2.3 - CRUD Completo
 
-```typescript
-export type WishlistPriority = 'low' | 'medium' | 'high';
-export type WishlistStatus = 'pending' | 'purchased' | 'cancelled';
+**Emprestimos (ja tem parcial):**
+- Adicionar dialog de edicao completo (nome, descricao, banco, categoria, subcategoria, status)
+- Adicionar confirmacao antes de excluir
+- Permitir editar parcelas individuais (valor, data vencimento)
 
-export interface WishlistItem {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  categoryId?: string;
-  subcategory?: string;
-  priority: WishlistPriority;
-  url?: string;
-  imageUrl?: string;
-  status: WishlistStatus;
-  targetDate?: Date;
-  purchasedAt?: Date;
-  createdAt: Date;
-}
-```
+**Parcelamentos:**
+- Adicionar botao "Novo Parcelamento" na pagina Installments e Compromissos (hoje so e possivel via Transacoes)
+- Reutilizar o `AddTransactionDialog` ja existente com `isInstallment` pre-selecionado
+- Adicionar opcao de editar descricao, categoria e subcategoria de um grupo de parcelamento
 
 ---
 
-### Integracao com Dashboard
+### Resumo de Arquivos
 
-Adicionar widget no Dashboard mostrando:
-- "Proximos itens da lista de desejos"
-- Items com prioridade alta que podem ser comprados em breve
-- Resumo: X itens pendentes, total R$ Y
+**Criar:**
+| Arquivo | Descricao |
+|---------|-----------|
+| `supabase/functions/financial-advisor/index.ts` | Edge function do consultor IA |
+| `src/components/ai/FinancialAdvisorChat.tsx` | Widget de chat com streaming |
+| `src/components/ai/ChatMessage.tsx` | Componente de mensagem |
+| `src/components/ai/QuickSuggestions.tsx` | Sugestoes rapidas |
+| `src/hooks/useFinancialAdvisor.ts` | Hook de streaming |
+
+**Modificar:**
+| Arquivo | Modificacao |
+|---------|-------------|
+| `src/App.tsx` | Incluir widget flutuante do chat |
+| `src/hooks/useLoans.ts` | Adicionar category_id/subcategory no CRUD |
+| `src/hooks/useInstallments.ts` | Adicionar mutation `markInstallmentsPaid` |
+| `src/hooks/useCommitments.ts` | Resolver categoryName para emprestimos |
+| `src/pages/Loans.tsx` | Seletores de categoria, dialog de edicao completo |
+| `src/pages/Installments.tsx` | Botao "Novo Parcelamento" |
+| `src/pages/Compromissos.tsx` | Botao "Novo Parcelamento", opcao de pagamento simplificado |
+| `src/components/compromissos/PayCommitmentDialog.tsx` | Banco opcional, checkbox "Registrar transacao" |
+| `src/types/finance.ts` | Adicionar categoryId/subcategory ao tipo Loan |
+| `src/lib/validations.ts` | Atualizar loanSchema com category_id/subcategory |
+
+**Migracao SQL:**
+- Adicionar `category_id` e `subcategory` a tabela `loans`
 
 ---
 
-### Resultado Esperado
+### Fluxo de Pagamento Simplificado
 
-- **Lista de Desejos**: Adicionar e gerenciar itens desejados
-- **Projecao Inteligente**: Sistema calcula quando o usuario pode comprar cada item
-- **Insights**: Sugestoes de economia e otimizacao
-- **Integracao**: Conectado ao sistema de transacoes para registrar compras
-- **Dashboard**: Widget resumo no painel principal
+```text
+Usuario clica "Pagar" no compromisso
+            |
+     Dialog abre
+            |
+    Seleciona quantas parcelas
+            |
+   [x] Registrar transacao financeira?
+     |                    |
+    SIM                  NAO
+     |                    |
+  Seleciona           Botao: "Marcar
+  banco + data        como Pago"
+     |                    |
+  Cria transacao      Apenas marca
+  de debito           parcelas como
+  no banco            pagas no sistema
+```
+
+### Ordem de Implementacao
+
+1. Migracao SQL (category_id + subcategory em loans)
+2. Edge function do consultor financeiro
+3. Modificacoes nos hooks (useLoans, useInstallments, useCommitments)
+4. Componentes do chat IA
+5. Modificacoes nas paginas (Loans, Installments, Compromissos)
+6. Pagamento simplificado (PayCommitmentDialog)
+7. CRUD completo (editar emprestimos, novo parcelamento)
+8. Integrar widget do chat no App.tsx
