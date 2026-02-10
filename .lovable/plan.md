@@ -1,121 +1,124 @@
 
-## Plano: IA Consultor Financeiro + Melhorias em Parcelamentos e Emprestimos
 
-### Visao Geral
+## Plano: Melhorias no CRUD de Parcelas e Pagamento Seletivo
 
-Duas frentes de trabalho:
-1. **Consultor Financeiro com IA** - Chat integrado ao app que analisa seus dados financeiros em tempo real
-2. **Melhorias em Parcelamentos e Emprestimos** - CRUD completo, pagamento simplificado e integracao com categorias/orcamento
+### Problemas Identificados
 
----
-
-## PARTE 1: Consultor Financeiro com IA
-
-### Arquitetura
-
-O app ja roda em Lovable Cloud, que fornece acesso ao Lovable AI (modelos Gemini) sem necessidade de chave de API. A implementacao sera:
-
-1. **Edge Function** (`supabase/functions/financial-advisor/index.ts`) - Recebe os dados financeiros do usuario e envia para a Lovable AI com um system prompt especializado em consultoria financeira
-2. **Interface de Chat** - Widget flutuante acessivel de qualquer pagina, com streaming de respostas em tempo real
-
-### Edge Function - financial-advisor
-
-- Endpoint que recebe `messages` (historico do chat) + `financialContext` (dados do usuario)
-- System prompt em portugues com especialidade em financas pessoais brasileiras
-- Modelo: `google/gemini-3-flash-preview` (rapido e eficiente)
-- Streaming SSE para respostas em tempo real
-- Tratamento de erros 429 (rate limit) e 402 (creditos)
-
-### System Prompt do Consultor
-
-O prompt incluira instrucoes para:
-- Analisar padroes de gastos e identificar oportunidades de economia
-- Sugerir estrategias de quitacao de dividas (avalanche vs bola de neve)
-- Avaliar momento ideal para compras da lista de desejos
-- Orientar sobre alocacao de orcamento baseado nas areas configuradas
-- Responder em portugues com valores em R$
-- Ser didatico e acessivel, evitando jargoes financeiros complexos
-
-### Dados Financeiros como Contexto
-
-O frontend coletara e enviara ao backend:
-- Resumo mensal (receita, despesa, saldo)
-- Compromissos ativos (parcelas + emprestimos)
-- Orcamento configurado (areas e porcentagens)
-- Metas financeiras ativas
-- Lista de desejos pendentes
-- Top categorias de gasto
-
-### Interface do Chat
-
-- **Widget flutuante** no canto inferior direito com icone de bot
-- **Painel deslizante** que abre sobre o conteudo
-- **Sugestoes rapidas** pre-definidas: "Como reduzir meus gastos?", "Devo antecipar parcelas?", "Quando posso comprar X?"
-- **Streaming de resposta** token por token
-- **Historico** mantido durante a sessao (em memoria, sem persistencia)
-
-### Arquivos a Criar
-
-| Arquivo | Descricao |
-|---------|-----------|
-| `supabase/functions/financial-advisor/index.ts` | Edge function com Lovable AI |
-| `src/components/ai/FinancialAdvisorChat.tsx` | Componente principal do chat |
-| `src/components/ai/ChatMessage.tsx` | Renderizacao de mensagens |
-| `src/components/ai/QuickSuggestions.tsx` | Botoes de sugestoes rapidas |
-| `src/hooks/useFinancialAdvisor.ts` | Hook para streaming e estado do chat |
-
-### Arquivos a Modificar
-
-| Arquivo | Modificacao |
-|---------|-------------|
-| `src/App.tsx` | Adicionar widget flutuante do chat |
-| `supabase/config.toml` | Registrar a nova edge function |
+1. **CRUD incompleto de parcelas/parcelamentos**: Nao e possivel editar descricao, categoria, subcategoria ou detalhes de um grupo de parcelamento. Na pagina de Emprestimos, o botao "Pagar" na lista de parcelas nao oferece opcoes (banco, transacao, desconto).
+2. **Pagamento nao permite selecionar parcelas especificas**: O `PayCommitmentDialog` usa um slider que paga sequencialmente (1, 2, 3...). O usuario quer escolher QUAIS parcelas pagar (ex: parcela 3 e 5, mas nao a 4).
+3. **Antecipacao rigida**: O dialog de antecipacao exige banco obrigatoriamente. O usuario quer poder antecipar e escolher se foi paga em outra fatura (sem criar debito em conta).
 
 ---
 
-## PARTE 2: Melhorias em Parcelamentos e Emprestimos
+### Mudancas Planejadas
 
-### 2.1 - Adicionar Categorias e Subcategorias aos Emprestimos
+#### 1. PayCommitmentDialog - Selecao Individual de Parcelas
 
-**Migracao SQL:**
-- Adicionar coluna `category_id` (uuid, FK para categories, nullable) na tabela `loans`
-- Adicionar coluna `subcategory` (text, nullable) na tabela `loans`
+Substituir o slider de quantidade por uma lista de checkboxes onde o usuario seleciona exatamente quais parcelas quer pagar.
 
-**Impacto no codigo:**
-- `src/hooks/useLoans.ts` - Incluir category_id e subcategory no CRUD
-- `src/pages/Loans.tsx` - Adicionar seletores de categoria/subcategoria no formulario de criacao/edicao
-- `src/hooks/useCommitments.ts` - Carregar nome da categoria para emprestimos (igual ja faz para parcelamentos)
-- **Orcamento**: Os emprestimos com categoria passam a aparecer automaticamente no modulo de Orcamento, pois as transacoes de pagamento ja sao criadas com a categoria correta
+**Arquivo**: `src/components/compromissos/PayCommitmentDialog.tsx`
 
-### 2.2 - Pagamento Simplificado (sem exigir fonte)
+- Remover o `Slider` de contagem
+- Adicionar lista scrollavel com `Checkbox` para cada parcela pendente
+- Botoes "Selecionar Todas" e "Limpar"
+- Manter o checkbox "Registrar transacao financeira" (banco opcional)
+- Manter campo de desconto
+- Resumo atualiza dinamicamente com base nas parcelas selecionadas
 
-Atualmente, `PayCommitmentDialog` e os hooks de pagamento sempre exigem `bankId`. Precisamos:
+**Interface visual:**
+```text
++-------------------------------------------+
+| Pagar Parcelas                            |
+| Compra X - Cartao Y                       |
++-------------------------------------------+
+| Pendentes: 8 de 12                        |
+| R$ 450,00/parcela                         |
++-------------------------------------------+
+| [Selecionar Todas]  [Limpar]              |
+|                                           |
+| [x] Parcela 5/12 - 15/03 - R$ 450,00     |
+| [x] Parcela 6/12 - 15/04 - R$ 450,00     |
+| [ ] Parcela 7/12 - 15/05 - R$ 450,00     |
+| [ ] Parcela 8/12 - 15/06 - R$ 450,00     |
+| ...                                       |
++-------------------------------------------+
+| [x] Registrar transacao financeira        |
+|     [Selecione a conta: Banco Inter  v]   |
+| Data: [15/02/2026]                        |
+| Desconto: [0,00]                          |
++-------------------------------------------+
+| 2 parcelas selecionadas                   |
+| Subtotal: R$ 900,00                       |
+| Desconto: -R$ 0,00                        |
+| Total: R$ 900,00                          |
++-------------------------------------------+
+|        [Cancelar]  [Confirmar Pagamento]   |
++-------------------------------------------+
+```
 
-**Para Parcelamentos:**
-- Criar nova mutation `markInstallmentsPaid` no `useInstallments` que apenas marca as parcelas como pagas (movendo a data para hoje) sem criar transacao de debito
-- O usuario escolhe: "Registrar pagamento" (com banco) ou "Apenas marcar como pago" (sem banco)
+#### 2. Atualizar PayCommitmentDialog Props
 
-**Para Emprestimos:**
-- Modificar `payLoanInstallment` para aceitar `bankId` como verdadeiramente opcional
-- Se `bankId` nao for fornecido: marca como pago, atualiza `total_paid`, mas NAO cria transacao
-- Se `bankId` for fornecido: comportamento atual (marca + cria transacao)
+O dialog precisara receber a lista de parcelas individuais (installments ou loan_payments) para exibir os checkboxes. Modificar:
 
-**Mudancas na UI:**
-- `PayCommitmentDialog` - Campo banco se torna opcional com checkbox "Registrar transacao financeira"
-- Quando desmarcado, esconde o seletor de banco
-- Botao muda para "Marcar como Pago" vs "Confirmar Pagamento"
+- `Compromissos.tsx` - Passar `installmentGroup` ou `loan` ao dialog
+- O dialog extrai as parcelas pendentes e exibe para selecao
 
-### 2.3 - CRUD Completo
+**Arquivo**: `src/components/compromissos/PayCommitmentDialog.tsx`
+- Nova prop: `installmentGroup?: InstallmentGroup`
+- Nova prop: `loan?: Loan`
+- Retornar `selectedIds: string[]` no callback em vez de `count: number`
 
-**Emprestimos (ja tem parcial):**
-- Adicionar dialog de edicao completo (nome, descricao, banco, categoria, subcategoria, status)
-- Adicionar confirmacao antes de excluir
-- Permitir editar parcelas individuais (valor, data vencimento)
+#### 3. Compromissos.tsx - Atualizar handleConfirmPayment
 
-**Parcelamentos:**
-- Adicionar botao "Novo Parcelamento" na pagina Installments e Compromissos (hoje so e possivel via Transacoes)
-- Reutilizar o `AddTransactionDialog` ja existente com `isInstallment` pre-selecionado
-- Adicionar opcao de editar descricao, categoria e subcategoria de um grupo de parcelamento
+**Arquivo**: `src/pages/Compromissos.tsx`
+
+- Passar `installmentGroup` e `loan` para o `PayCommitmentDialog`
+- Atualizar `handleConfirmPayment` para receber `selectedIds` em vez de `count`
+- Para parcelamentos: usar `markInstallmentsPaid` ou `anticipateMultipleInstallments` com os IDs selecionados
+- Para emprestimos: iterar sobre os IDs selecionados e chamar `payLoanInstallment` para cada um
+
+#### 4. Antecipacao com Opcao "Pago em Outra Fatura"
+
+**Arquivo**: `src/components/installments/AnticipateDialog.tsx`
+
+- Adicionar checkbox "Pago em outra fatura" (similar ao "Registrar transacao")
+- Quando marcado: nao exige banco, apenas marca a parcela como paga/antecipada sem criar transacao de debito
+- Quando desmarcado: comportamento atual (exige banco, cria transacao)
+
+**Arquivo**: `src/components/installments/InstallmentDetailsDialog.tsx`
+
+- No modo "Antecipar Multiplas", adicionar checkbox "Registrar transacao financeira"
+- Banco so aparece quando checkbox esta marcado
+- Quando desmarcado, usa `markInstallmentsPaid` em vez de `anticipateMultipleInstallments`
+
+#### 5. CRUD Completo para Parcelamentos
+
+**Arquivo novo**: `src/components/installments/EditInstallmentGroupDialog.tsx`
+
+Dialog para editar detalhes do grupo de parcelamento:
+- Descricao (nome da compra)
+- Categoria (select com categorias de despesa)
+- Subcategoria (texto)
+- Atualiza TODAS as transacoes do grupo de uma vez
+
+**Arquivo**: `src/hooks/useInstallments.ts`
+
+- Nova mutation `updateInstallmentGroup` que atualiza descricao, category_id e subcategory em todas as transacoes do grupo
+
+**Arquivo**: `src/components/installments/InstallmentsList.tsx`
+
+- Adicionar botao "Editar" nos cards de parcelamento
+
+**Arquivo**: `src/pages/Installments.tsx`
+
+- Integrar o `EditInstallmentGroupDialog`
+
+#### 6. Pagamento na Pagina de Emprestimos
+
+**Arquivo**: `src/pages/Loans.tsx`
+
+- O botao "Pagar" de cada parcela individual agora abre um mini-dialog (ou usa o PayCommitmentDialog) com opcoes de banco, desconto e checkbox de transacao
+- Em vez de chamar `payLoanInstallment` diretamente sem opcoes
 
 ---
 
@@ -124,59 +127,28 @@ Atualmente, `PayCommitmentDialog` e os hooks de pagamento sempre exigem `bankId`
 **Criar:**
 | Arquivo | Descricao |
 |---------|-----------|
-| `supabase/functions/financial-advisor/index.ts` | Edge function do consultor IA |
-| `src/components/ai/FinancialAdvisorChat.tsx` | Widget de chat com streaming |
-| `src/components/ai/ChatMessage.tsx` | Componente de mensagem |
-| `src/components/ai/QuickSuggestions.tsx` | Sugestoes rapidas |
-| `src/hooks/useFinancialAdvisor.ts` | Hook de streaming |
+| `src/components/installments/EditInstallmentGroupDialog.tsx` | Dialog para editar grupo de parcelamento |
 
 **Modificar:**
 | Arquivo | Modificacao |
 |---------|-------------|
-| `src/App.tsx` | Incluir widget flutuante do chat |
-| `src/hooks/useLoans.ts` | Adicionar category_id/subcategory no CRUD |
-| `src/hooks/useInstallments.ts` | Adicionar mutation `markInstallmentsPaid` |
-| `src/hooks/useCommitments.ts` | Resolver categoryName para emprestimos |
-| `src/pages/Loans.tsx` | Seletores de categoria, dialog de edicao completo |
-| `src/pages/Installments.tsx` | Botao "Novo Parcelamento" |
-| `src/pages/Compromissos.tsx` | Botao "Novo Parcelamento", opcao de pagamento simplificado |
-| `src/components/compromissos/PayCommitmentDialog.tsx` | Banco opcional, checkbox "Registrar transacao" |
-| `src/types/finance.ts` | Adicionar categoryId/subcategory ao tipo Loan |
-| `src/lib/validations.ts` | Atualizar loanSchema com category_id/subcategory |
-
-**Migracao SQL:**
-- Adicionar `category_id` e `subcategory` a tabela `loans`
+| `src/components/compromissos/PayCommitmentDialog.tsx` | Selecao individual de parcelas com checkboxes |
+| `src/pages/Compromissos.tsx` | Passar dados de parcelas ao dialog, atualizar handler |
+| `src/components/installments/AnticipateDialog.tsx` | Checkbox "pago em outra fatura" (banco opcional) |
+| `src/components/installments/InstallmentDetailsDialog.tsx` | Checkbox "registrar transacao" na antecipacao multipla |
+| `src/components/installments/InstallmentsList.tsx` | Botao Editar nos cards |
+| `src/pages/Installments.tsx` | Integrar EditInstallmentGroupDialog |
+| `src/hooks/useInstallments.ts` | Nova mutation updateInstallmentGroup |
+| `src/pages/Loans.tsx` | Dialog de pagamento com opcoes no botao Pagar |
 
 ---
 
-### Fluxo de Pagamento Simplificado
-
-```text
-Usuario clica "Pagar" no compromisso
-            |
-     Dialog abre
-            |
-    Seleciona quantas parcelas
-            |
-   [x] Registrar transacao financeira?
-     |                    |
-    SIM                  NAO
-     |                    |
-  Seleciona           Botao: "Marcar
-  banco + data        como Pago"
-     |                    |
-  Cria transacao      Apenas marca
-  de debito           parcelas como
-  no banco            pagas no sistema
-```
-
 ### Ordem de Implementacao
 
-1. Migracao SQL (category_id + subcategory em loans)
-2. Edge function do consultor financeiro
-3. Modificacoes nos hooks (useLoans, useInstallments, useCommitments)
-4. Componentes do chat IA
-5. Modificacoes nas paginas (Loans, Installments, Compromissos)
-6. Pagamento simplificado (PayCommitmentDialog)
-7. CRUD completo (editar emprestimos, novo parcelamento)
-8. Integrar widget do chat no App.tsx
+1. Atualizar `PayCommitmentDialog` com selecao individual de parcelas
+2. Atualizar `Compromissos.tsx` para passar dados e usar nova interface
+3. Atualizar `AnticipateDialog` e `InstallmentDetailsDialog` com opcao de banco opcional
+4. Criar `EditInstallmentGroupDialog` e mutation `updateInstallmentGroup`
+5. Integrar edicao em `InstallmentsList` e `Installments.tsx`
+6. Melhorar pagamento individual na pagina `Loans.tsx`
+
