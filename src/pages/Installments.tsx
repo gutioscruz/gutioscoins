@@ -13,6 +13,7 @@ import { FutureCommitmentCard } from "@/components/installments/FutureCommitment
 import { EndProjectionCard } from "@/components/installments/EndProjectionCard";
 import { CategoryComparisonCard } from "@/components/installments/CategoryComparisonCard";
 import { InstallmentsFilters } from "@/components/installments/InstallmentsFilters";
+import { EditInstallmentGroupDialog } from "@/components/installments/EditInstallmentGroupDialog";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function Installments() {
@@ -25,6 +26,8 @@ export default function Installments() {
     anticipateInstallment,
     anticipateMultipleInstallments,
     payOffInstallments,
+    markInstallmentsPaid,
+    updateInstallmentGroup,
     banks,
     categories,
     cards,
@@ -34,6 +37,7 @@ export default function Installments() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [anticipateOpen, setAnticipateOpen] = useState(false);
   const [payOffOpen, setPayOffOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   // Filter states
   const [selectedCardId, setSelectedCardId] = useState("all");
@@ -48,21 +52,14 @@ export default function Installments() {
     setSortBy("endDate");
   };
 
-  // Filter and sort installment groups
   const filteredGroups = useMemo(() => {
     let filtered = [...installmentGroups];
-
-    // Apply card filter
     if (selectedCardId !== "all") {
       filtered = filtered.filter((g) => g.cardId === selectedCardId);
     }
-
-    // Apply category filter
     if (selectedCategoryId !== "all") {
       filtered = filtered.filter((g) => g.categoryId === selectedCategoryId);
     }
-
-    // Apply sorting
     switch (sortBy) {
       case "endDate":
         filtered.sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
@@ -77,17 +74,13 @@ export default function Installments() {
         filtered.sort((a, b) => b.remainingAmount - a.remainingAmount);
         break;
     }
-
     return filtered;
   }, [installmentGroups, selectedCardId, selectedCategoryId, sortBy]);
 
-  // Get unique cards and categories from installment groups for filter options
   const filterCards = useMemo(() => {
     const cardMap = new Map<string, string>();
     installmentGroups.forEach((g) => {
-      if (g.cardId && g.cardName) {
-        cardMap.set(g.cardId, g.cardName);
-      }
+      if (g.cardId && g.cardName) cardMap.set(g.cardId, g.cardName);
     });
     return Array.from(cardMap.entries()).map(([id, name]) => ({ id, name }));
   }, [installmentGroups]);
@@ -95,9 +88,7 @@ export default function Installments() {
   const filterCategories = useMemo(() => {
     const catMap = new Map<string, string>();
     installmentGroups.forEach((g) => {
-      if (g.categoryId && g.categoryName) {
-        catMap.set(g.categoryId, g.categoryName);
-      }
+      if (g.categoryId && g.categoryName) catMap.set(g.categoryId, g.categoryName);
     });
     return Array.from(catMap.entries()).map(([id, name]) => ({ id, name }));
   }, [installmentGroups]);
@@ -117,12 +108,22 @@ export default function Installments() {
     setPayOffOpen(true);
   };
 
+  const handleEdit = (group: InstallmentGroup) => {
+    setSelectedGroup(group);
+    setEditOpen(true);
+  };
+
   const handleConfirmAnticipate = (
     installmentId: string,
     bankId: string,
-    date: Date
+    date: Date,
+    createTransaction: boolean
   ) => {
-    anticipateInstallment.mutate({ installmentId, bankId, anticipationDate: date });
+    if (createTransaction && bankId) {
+      anticipateInstallment.mutate({ installmentId, bankId, anticipationDate: date });
+    } else {
+      markInstallmentsPaid.mutate({ installmentIds: [installmentId], paymentDate: date });
+    }
   };
 
   const handleConfirmAnticipateMultiple = (
@@ -133,8 +134,21 @@ export default function Installments() {
     anticipateMultipleInstallments.mutate({ installmentIds, bankId, anticipationDate: date });
   };
 
+  const handleMarkAsPaid = (installmentIds: string[], date: Date) => {
+    markInstallmentsPaid.mutate({ installmentIds, paymentDate: date });
+  };
+
   const handleConfirmPayOff = (groupId: string, bankId: string, date: Date) => {
     payOffInstallments.mutate({ groupId, bankId, paymentDate: date });
+  };
+
+  const handleConfirmEdit = (groupId: string, data: { description: string; categoryId: string; subcategory?: string }) => {
+    updateInstallmentGroup.mutate({
+      groupId,
+      description: data.description,
+      categoryId: data.categoryId,
+      subcategory: data.subcategory,
+    });
   };
 
   if (isLoading) {
@@ -191,6 +205,7 @@ export default function Installments() {
             onViewDetails={handleViewDetails}
             onAnticipate={handleAnticipate}
             onPayOff={handlePayOff}
+            onEdit={handleEdit}
           />
         </TabsContent>
 
@@ -216,6 +231,7 @@ export default function Installments() {
         group={selectedGroup}
         banks={banks || []}
         onAnticipateMultiple={handleConfirmAnticipateMultiple}
+        onMarkAsPaid={handleMarkAsPaid}
         isAnticipating={anticipateMultipleInstallments.isPending}
       />
 
@@ -235,6 +251,15 @@ export default function Installments() {
         banks={banks || []}
         onConfirm={handleConfirmPayOff}
         isLoading={payOffInstallments.isPending}
+      />
+
+      <EditInstallmentGroupDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        group={selectedGroup}
+        categories={(categories || []).map((c) => ({ id: c.id, name: c.name, subcategories: c.subcategories }))}
+        onConfirm={handleConfirmEdit}
+        isLoading={updateInstallmentGroup.isPending}
       />
     </div>
   );

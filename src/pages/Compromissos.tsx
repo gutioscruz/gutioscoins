@@ -117,7 +117,7 @@ const Compromissos = () => {
 
   const handleConfirmPayment = async (data: {
     commitment: Commitment;
-    count: number;
+    selectedIds: string[];
     bankId: string;
     paymentDate: Date;
     discount: number;
@@ -126,41 +126,33 @@ const Compromissos = () => {
     setIsProcessing(true);
     try {
       if (data.commitment.kind === "installment") {
-        const group = installmentGroups.find(g => g.id === data.commitment.originalId);
-        if (!group) throw new Error("Parcelamento não encontrado");
-
-        const pendingInstallments = group.installments
-          .filter(i => !i.isPaid)
-          .sort((a, b) => a.installmentNumber - b.installmentNumber)
-          .slice(0, data.count);
-
-        const installmentIds = pendingInstallments.map(i => i.id);
-
         if (data.createTransaction && data.bankId) {
           anticipateMultipleInstallments.mutate({
-            installmentIds,
+            installmentIds: data.selectedIds,
             bankId: data.bankId,
             anticipationDate: data.paymentDate,
           });
         } else {
-          // Just mark as paid without creating transaction
           const { markInstallmentsPaid } = useInstallmentsHook;
           markInstallmentsPaid.mutate({
-            installmentIds,
+            installmentIds: data.selectedIds,
             paymentDate: data.paymentDate,
           });
         }
       } else {
-        payLoanInstallmentsAhead({
-          loanId: data.commitment.originalId,
-          count: data.count,
-          bankId: data.createTransaction ? data.bankId : undefined,
-          discount: data.discount,
-          createTransaction: data.createTransaction,
-        });
+        // For loans, pay each selected installment
+        for (const installmentId of data.selectedIds) {
+          payLoanInstallment({
+            loanId: data.commitment.originalId,
+            installmentId,
+            bankId: data.createTransaction ? data.bankId : undefined,
+            discount: data.discount / data.selectedIds.length,
+            createTransaction: data.createTransaction,
+          });
+        }
       }
 
-      toast.success(`${data.count} parcela(s) paga(s) com sucesso!`);
+      toast.success(`${data.selectedIds.length} parcela(s) paga(s) com sucesso!`);
       setPayDialogOpen(false);
     } catch (error: any) {
       toast.error(`Erro ao processar pagamento: ${error.message}`);
@@ -470,6 +462,8 @@ const Compromissos = () => {
           onOpenChange={setPayDialogOpen}
           commitment={selectedCommitment}
           banks={banks}
+          installmentGroup={getInstallmentGroup(selectedCommitment)}
+          loan={getLoan(selectedCommitment)}
           onConfirm={handleConfirmPayment}
           isLoading={isProcessing}
         />

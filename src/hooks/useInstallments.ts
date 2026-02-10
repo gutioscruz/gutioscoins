@@ -480,6 +480,45 @@ export function useInstallments() {
     },
   });
 
+  const updateInstallmentGroup = useMutation({
+    mutationFn: async ({
+      groupId,
+      description,
+      categoryId,
+      subcategory,
+    }: {
+      groupId: string;
+      description: string;
+      categoryId: string;
+      subcategory?: string;
+    }) => {
+      const group = installmentGroups.find((g) => g.id === groupId);
+      if (!group) throw new Error("Parcelamento não encontrado");
+
+      const ids = group.installments.map((i) => i.id);
+
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          description,
+          category_id: categoryId,
+          subcategory: subcategory || null,
+        })
+        .in("id", ids);
+
+      if (error) throw error;
+      return { count: ids.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["installment-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Parcelamento atualizado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar parcelamento: ${error.message}`);
+    },
+  });
+
   return {
     installmentGroups,
     monthlyCommitments,
@@ -490,6 +529,7 @@ export function useInstallments() {
     anticipateMultipleInstallments,
     payOffInstallments,
     markInstallmentsPaid,
+    updateInstallmentGroup,
     banks,
     categories,
     cards,

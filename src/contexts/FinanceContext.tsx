@@ -77,8 +77,8 @@ interface FinanceContextType {
   addLoan: (loan: Omit<Loan, "id" | "payments" | "totalPaid" | "totalInterest">) => void;
   updateLoan: (id: string, loan: Partial<Omit<Loan, "id">>) => void;
   deleteLoan: (id: string) => void;
-  payLoanInstallment: (params: { loanId: string; installmentId: string; bankId?: string; discount?: number }) => void;
-  payLoanInstallmentsAhead: (params: { loanId: string; count: number; bankId?: string }) => void;
+  payLoanInstallment: (params: { loanId: string; installmentId: string; bankId?: string; discount?: number; createTransaction?: boolean }) => void;
+  payLoanInstallmentsAhead: (params: { loanId: string; count: number; bankId?: string; discount?: number; createTransaction?: boolean }) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);

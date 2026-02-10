@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, Plus, TrendingDown, DollarSign, Calendar, AlertCircle, CheckCircle2, Trash2, Pencil } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PaymentFrequency, LoanStatus } from "@/types/finance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +28,15 @@ const Loans = () => {
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  
+  // Pay single installment dialog state
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [payingLoanId, setPayingLoanId] = useState("");
+  const [payingInstallmentId, setPayingInstallmentId] = useState("");
+  const [payingAmount, setPayingAmount] = useState(0);
+  const [payBankId, setPayBankId] = useState("");
+  const [payDiscount, setPayDiscount] = useState("");
+  const [payCreateTransaction, setPayCreateTransaction] = useState(true);
   
   // Form states
   const [name, setName] = useState("");
@@ -531,7 +541,15 @@ const Loans = () => {
                           {!payment.paid && (
                             <Button
                               size="sm"
-                              onClick={() => payLoanInstallment({ loanId: loan.id, installmentId: payment.id })}
+                              onClick={() => {
+                                setPayingLoanId(loan.id);
+                                setPayingInstallmentId(payment.id);
+                                setPayingAmount(payment.amount);
+                                setPayBankId(loan.bankId || "");
+                                setPayDiscount("");
+                                setPayCreateTransaction(true);
+                                setPayDialogOpen(true);
+                              }}
                             >
                               Pagar
                             </Button>
@@ -593,6 +611,94 @@ const Loans = () => {
           })}
         </div>
       )}
+      {/* Pay Single Installment Dialog */}
+      <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar Parcela</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Valor da parcela</p>
+              <p className="text-2xl font-bold">R$ {payingAmount.toFixed(2)}</p>
+            </div>
+
+            <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <Checkbox
+                id="loanPayCreateTransaction"
+                checked={payCreateTransaction}
+                onCheckedChange={(checked) => setPayCreateTransaction(checked === true)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="loanPayCreateTransaction" className="text-sm font-medium cursor-pointer">
+                  Registrar transação financeira
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Desmarque para apenas marcar como pago.
+                </p>
+              </div>
+            </div>
+
+            {payCreateTransaction && (
+              <div className="space-y-2">
+                <Label>Conta para débito</Label>
+                <Select value={payBankId} onValueChange={setPayBankId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks.map((bank) => (
+                      <SelectItem key={bank.id} value={bank.id}>
+                        {bank.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Desconto (opcional)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={payDiscount}
+                onChange={(e) => setPayDiscount(e.target.value)}
+              />
+            </div>
+
+            {(parseFloat(payDiscount) || 0) > 0 && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span>Valor final</span>
+                  <span className="font-bold">R$ {(payingAmount - (parseFloat(payDiscount) || 0)).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={payCreateTransaction && !payBankId}
+              onClick={() => {
+                payLoanInstallment({
+                  loanId: payingLoanId,
+                  installmentId: payingInstallmentId,
+                  bankId: payCreateTransaction ? payBankId : undefined,
+                  discount: parseFloat(payDiscount) || 0,
+                  createTransaction: payCreateTransaction,
+                });
+                setPayDialogOpen(false);
+              }}
+            >
+              {payCreateTransaction ? "Confirmar Pagamento" : "Marcar como Pago"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

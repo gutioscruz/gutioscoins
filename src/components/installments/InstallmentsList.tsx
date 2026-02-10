@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Eye, FastForward, CreditCard, Clock, AlertTriangle } from "lucide-react";
+import { Eye, FastForward, CreditCard, Clock, AlertTriangle, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { InstallmentGroup } from "@/hooks/useInstallments";
@@ -13,6 +13,7 @@ interface InstallmentsListProps {
   onViewDetails: (group: InstallmentGroup) => void;
   onAnticipate: (group: InstallmentGroup) => void;
   onPayOff: (group: InstallmentGroup) => void;
+  onEdit?: (group: InstallmentGroup) => void;
 }
 
 export function InstallmentsList({
@@ -20,6 +21,7 @@ export function InstallmentsList({
   onViewDetails,
   onAnticipate,
   onPayOff,
+  onEdit,
 }: InstallmentsListProps) {
   if (groups.length === 0) {
     return (
@@ -117,7 +119,17 @@ export function InstallmentsList({
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t">
+              <div className="flex gap-2 pt-2 border-t flex-wrap">
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(group)}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
