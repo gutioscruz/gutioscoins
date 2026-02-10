@@ -25,6 +25,7 @@ interface InstallmentDetailsDialogProps {
   group: InstallmentGroup | null;
   banks?: Array<{ id: string; name: string }>;
   onAnticipateMultiple?: (installmentIds: string[], bankId: string, date: Date) => void;
+  onMarkAsPaid?: (installmentIds: string[], date: Date) => void;
   isAnticipating?: boolean;
 }
 
@@ -34,12 +35,14 @@ export function InstallmentDetailsDialog({
   group,
   banks = [],
   onAnticipateMultiple,
+  onMarkAsPaid,
   isAnticipating = false,
 }: InstallmentDetailsDialogProps) {
   const [selectedInstallments, setSelectedInstallments] = useState<Set<string>>(new Set());
   const [anticipateMode, setAnticipateMode] = useState(false);
   const [selectedBankId, setSelectedBankId] = useState<string>("");
   const [anticipationDate, setAnticipationDate] = useState<Date>(new Date());
+  const [createTransaction, setCreateTransaction] = useState(true);
 
   if (!group) return null;
 
@@ -72,11 +75,20 @@ export function InstallmentDetailsDialog({
   };
 
   const handleAnticipate = () => {
-    if (!selectedBankId || selectedInstallments.size === 0 || !onAnticipateMultiple) return;
-    onAnticipateMultiple(Array.from(selectedInstallments), selectedBankId, anticipationDate);
+    if (selectedInstallments.size === 0) return;
+    const ids = Array.from(selectedInstallments);
+    
+    if (createTransaction && onAnticipateMultiple) {
+      if (!selectedBankId) return;
+      onAnticipateMultiple(ids, selectedBankId, anticipationDate);
+    } else if (onMarkAsPaid) {
+      onMarkAsPaid(ids, anticipationDate);
+    }
+    
     setAnticipateMode(false);
     setSelectedInstallments(new Set());
     setSelectedBankId("");
+    setCreateTransaction(true);
     onOpenChange(false);
   };
 
@@ -85,6 +97,7 @@ export function InstallmentDetailsDialog({
       setAnticipateMode(false);
       setSelectedInstallments(new Set());
       setSelectedBankId("");
+      setCreateTransaction(true);
     }
     onOpenChange(isOpen);
   };
@@ -165,18 +178,40 @@ export function InstallmentDetailsDialog({
                   <span className="font-bold">{formatCurrency(selectedTotal)}</span>
                 </div>
 
-                <Select value={selectedBankId} onValueChange={setSelectedBankId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta para débito" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {banks.map((bank) => (
-                      <SelectItem key={bank.id} value={bank.id}>
-                        {bank.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Create Transaction Checkbox */}
+                <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                  <Checkbox
+                    id="detailsCreateTransaction"
+                    checked={createTransaction}
+                    onCheckedChange={(checked) => setCreateTransaction(checked === true)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="detailsCreateTransaction"
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      Registrar transação financeira
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Desmarque se foi paga em outra fatura.
+                    </p>
+                  </div>
+                </div>
+
+                {createTransaction && (
+                  <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta para débito" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.id}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
 
                 <Popover>
                   <PopoverTrigger asChild>
@@ -206,10 +241,10 @@ export function InstallmentDetailsDialog({
                   </Button>
                   <Button
                     className="flex-1"
-                    disabled={!selectedBankId || isAnticipating}
+                    disabled={(createTransaction && !selectedBankId) || isAnticipating}
                     onClick={handleAnticipate}
                   >
-                    {isAnticipating ? "Antecipando..." : "Confirmar"}
+                    {isAnticipating ? "Processando..." : createTransaction ? "Confirmar Antecipação" : "Marcar como Pago"}
                   </Button>
                 </div>
               </div>

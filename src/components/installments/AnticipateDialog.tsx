@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,7 +29,7 @@ interface AnticipateDialogProps {
   onOpenChange: (open: boolean) => void;
   group: InstallmentGroup | null;
   banks: Array<{ id: string; name: string }>;
-  onConfirm: (installmentId: string, bankId: string, date: Date) => void;
+  onConfirm: (installmentId: string, bankId: string, date: Date, createTransaction: boolean) => void;
   isLoading: boolean;
 }
 
@@ -43,6 +44,7 @@ export function AnticipateDialog({
   const [selectedInstallment, setSelectedInstallment] = useState<string>("");
   const [selectedBank, setSelectedBank] = useState<string>("");
   const [date, setDate] = useState<Date>(new Date());
+  const [createTransaction, setCreateTransaction] = useState(true);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -55,12 +57,13 @@ export function AnticipateDialog({
   const pendingInstallments = group.installments.filter((i) => !i.isPaid);
 
   const handleConfirm = () => {
-    if (selectedInstallment && selectedBank) {
-      onConfirm(selectedInstallment, selectedBank, date);
+    if (selectedInstallment && (createTransaction ? selectedBank : true)) {
+      onConfirm(selectedInstallment, createTransaction ? selectedBank : "", date, createTransaction);
       onOpenChange(false);
       setSelectedInstallment("");
       setSelectedBank("");
       setDate(new Date());
+      setCreateTransaction(true);
     }
   };
 
@@ -99,21 +102,43 @@ export function AnticipateDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Conta para Débito</Label>
-            <Select value={selectedBank} onValueChange={setSelectedBank}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a conta" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks?.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id}>
-                    {bank.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Create Transaction Checkbox */}
+          <div className="flex items-center space-x-2 p-3 border rounded-lg">
+            <Checkbox
+              id="anticipateCreateTransaction"
+              checked={createTransaction}
+              onCheckedChange={(checked) => setCreateTransaction(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <label
+                htmlFor="anticipateCreateTransaction"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Registrar transação financeira
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Desmarque se foi paga em outra fatura ou apenas quer marcar como antecipada.
+              </p>
+            </div>
           </div>
+
+          {createTransaction && (
+            <div className="space-y-2">
+              <Label>Conta para Débito</Label>
+              <Select value={selectedBank} onValueChange={setSelectedBank}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks?.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      {bank.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Data da Antecipação</Label>
@@ -161,7 +186,7 @@ export function AnticipateDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!selectedInstallment || !selectedBank || isLoading}
+            disabled={!selectedInstallment || (createTransaction && !selectedBank) || isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirmar Antecipação

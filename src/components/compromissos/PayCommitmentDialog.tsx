@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { CreditCard, Landmark, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,20 +18,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Commitment } from "@/hooks/useCommitments";
+import { InstallmentGroup } from "@/hooks/useInstallments";
+import { Loan } from "@/types/finance";
 import { Bank } from "@/types/finance";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface PayableItem {
+  id: string;
+  label: string;
+  dateLabel: string;
+  amount: number;
+}
 
 interface PayCommitmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   commitment: Commitment | null;
   banks: Bank[];
+  installmentGroup?: InstallmentGroup;
+  loan?: Loan;
   onConfirm: (data: {
     commitment: Commitment;
-    count: number;
+    selectedIds: string[];
     bankId: string;
     paymentDate: Date;
     discount: number;
@@ -52,33 +65,77 @@ export const PayCommitmentDialog = ({
   onOpenChange,
   commitment,
   banks,
+  installmentGroup,
+  loan,
   onConfirm,
   isLoading = false,
 }: PayCommitmentDialogProps) => {
-  const [count, setCount] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bankId, setBankId] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [discount, setDiscount] = useState("");
   const [createTransaction, setCreateTransaction] = useState(false);
 
-  const maxCount = commitment?.remainingCount || 1;
-  
-  const totalAmount = useMemo(() => {
-    if (!commitment) return 0;
-    return commitment.monthlyAmount * count;
-  }, [commitment, count]);
+  // Build list of payable items from installmentGroup or loan
+  const payableItems = useMemo<PayableItem[]>(() => {
+    if (commitment?.kind === "installment" && installmentGroup) {
+      return installmentGroup.installments
+        .filter((i) => !i.isPaid)
+        .sort((a, b) => a.installmentNumber - b.installmentNumber)
+        .map((i) => ({
+          id: i.id,
+          label: `Parcela ${i.installmentNumber}/${installmentGroup.totalCount}`,
+          dateLabel: format(i.date, "dd/MM/yyyy", { locale: ptBR }),
+          amount: i.amount,
+        }));
+    }
+    if (commitment?.kind === "loan" && loan) {
+      return (loan.payments || [])
+        .filter((p) => !p.paid)
+        .sort((a, b) => a.installmentNumber - b.installmentNumber)
+        .map((p) => ({
+          id: p.id,
+          label: `Parcela ${p.installmentNumber}/${loan.installments}`,
+          dateLabel: format(p.dueDate, "dd/MM/yyyy", { locale: ptBR }),
+          amount: p.amount,
+        }));
+    }
+    return [];
+  }, [commitment, installmentGroup, loan]);
+
+  const selectedTotal = useMemo(() => {
+    return payableItems
+      .filter((item) => selectedIds.has(item.id))
+      .reduce((sum, item) => sum + item.amount, 0);
+  }, [payableItems, selectedIds]);
 
   const discountValue = parseFloat(discount) || 0;
-  const finalAmount = totalAmount - discountValue;
+  const finalAmount = selectedTotal - discountValue;
+
+  const toggleItem = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(payableItems.map((i) => i.id)));
+  };
+
+  const clearAll = () => {
+    setSelectedIds(new Set());
+  };
 
   const handleSubmit = () => {
-    if (!commitment) return;
-    // bankId is only required when createTransaction is true
+    if (!commitment || selectedIds.size === 0) return;
     if (createTransaction && !bankId) return;
 
     onConfirm({
       commitment,
-      count,
+      selectedIds: Array.from(selectedIds),
       bankId: createTransaction ? bankId : "",
       paymentDate: new Date(paymentDate),
       discount: discountValue,
@@ -88,7 +145,7 @@ export const PayCommitmentDialog = ({
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      setCount(1);
+      setSelectedIds(new Set());
       setBankId("");
       setPaymentDate(new Date().toISOString().split("T")[0]);
       setDiscount("");
@@ -96,6 +153,11 @@ export const PayCommitmentDialog = ({
     }
     onOpenChange(isOpen);
   };
+
+  // Reset selection when commitment changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [commitment?.id]);
 
   if (!commitment) return null;
 
@@ -114,7 +176,7 @@ export const PayCommitmentDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Current Status */}
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <div>
@@ -128,24 +190,50 @@ export const PayCommitmentDialog = ({
             </Badge>
           </div>
 
-          {/* Count Selector */}
-          <div className="space-y-3">
+          {/* Installment Selection */}
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Quantas parcelas pagar?</Label>
-              <span className="text-lg font-bold">{count}</span>
+              <Label>Selecione as parcelas</Label>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={selectAll} className="h-7 text-xs">
+                  Selecionar Todas
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearAll} className="h-7 text-xs">
+                  Limpar
+                </Button>
+              </div>
             </div>
-            <Slider
-              value={[count]}
-              onValueChange={(value) => setCount(value[0])}
-              min={1}
-              max={maxCount}
-              step={1}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1 parcela</span>
-              <span>{maxCount} parcelas (todas)</span>
-            </div>
+
+            <ScrollArea className="h-[200px] pr-4 border rounded-lg">
+              <div className="space-y-1 p-2">
+                {payableItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-md cursor-pointer transition-colors ${
+                      selectedIds.has(item.id)
+                        ? "bg-primary/10 border border-primary/30"
+                        : "hover:bg-muted/50 border border-transparent"
+                    }`}
+                    onClick={() => toggleItem(item.id)}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={() => toggleItem(item.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.dateLabel}</p>
+                    </div>
+                    <p className="text-sm font-semibold">{formatCurrency(item.amount)}</p>
+                  </div>
+                ))}
+                {payableItems.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma parcela pendente
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
           </div>
 
           {/* Create Transaction Checkbox */}
@@ -168,7 +256,7 @@ export const PayCommitmentDialog = ({
             </div>
           </div>
 
-          {/* Bank Selection - only shown when createTransaction is true */}
+          {/* Bank Selection */}
           {createTransaction && (
             <div className="space-y-2">
               <Label htmlFor="bank">Débito de qual conta?</Label>
@@ -208,7 +296,7 @@ export const PayCommitmentDialog = ({
             </div>
           </div>
 
-          {/* Discount (optional) */}
+          {/* Discount */}
           <div className="space-y-2">
             <Label htmlFor="discount">Desconto obtido (opcional)</Label>
             <Input
@@ -224,8 +312,8 @@ export const PayCommitmentDialog = ({
           {/* Summary */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
             <div className="flex justify-between text-sm">
-              <span>Valor das parcelas ({count}x)</span>
-              <span>{formatCurrency(totalAmount)}</span>
+              <span>{selectedIds.size} parcela(s) selecionada(s)</span>
+              <span>{formatCurrency(selectedTotal)}</span>
             </div>
             {discountValue > 0 && (
               <div className="flex justify-between text-sm text-income">
@@ -246,7 +334,7 @@ export const PayCommitmentDialog = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={(createTransaction && !bankId) || isLoading}
+            disabled={selectedIds.size === 0 || (createTransaction && !bankId) || isLoading}
           >
             {isLoading
               ? "Processando..."
