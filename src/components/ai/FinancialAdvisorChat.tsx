@@ -3,12 +3,15 @@ import { Bot, X, Send, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useFinancialAdvisor, ChatMessage } from "@/hooks/useFinancialAdvisor";
 import { useFinance } from "@/contexts/FinanceContext";
 import { useCommitments } from "@/hooks/useCommitments";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useBudgetAreas } from "@/hooks/useBudgetAreas";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { startOfMonth, endOfMonth, isAfter, isBefore, parseISO } from "date-fns";
 
 const QUICK_SUGGESTIONS = [
@@ -24,6 +27,7 @@ export const FinancialAdvisorChat = () => {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
 
   const { messages, isLoading, sendMessage, clearMessages } =
     useFinancialAdvisor();
@@ -53,7 +57,6 @@ export const FinancialAdvisorChat = () => {
       .filter((t) => t.type === "expense")
       .reduce((s, t) => s + t.amount, 0);
 
-    // Top expense categories
     const catMap = new Map<string, number>();
     monthTransactions
       .filter((t) => t.type === "expense")
@@ -127,56 +130,33 @@ export const FinancialAdvisorChat = () => {
     sendMessage(text, financialContext);
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg"
-        size="icon"
-      >
-        <Bot className="h-6 w-6" />
-      </Button>
-    );
-  }
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50 w-[400px] max-h-[600px] bg-card border rounded-xl shadow-2xl flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-primary/5">
+  const chatContent = (
+    <div className="flex flex-col h-full">
+      {/* Header actions */}
+      <div className="flex items-center justify-between px-1 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-primary/10">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm">Consultor Financeiro</h3>
             <p className="text-xs text-muted-foreground">Powered by IA</p>
           </div>
         </div>
-        <div className="flex gap-1">
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={clearMessages}
-              title="Limpar conversa"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+        {messages.length > 0 && (
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setIsOpen(false)}
+            onClick={clearMessages}
+            title="Limpar conversa"
           >
-            <X className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </Button>
-        </div>
+        )}
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
+      <ScrollArea className="flex-1 pr-2" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="space-y-4">
             <div className="text-center py-4">
@@ -224,7 +204,7 @@ export const FinancialAdvisorChat = () => {
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-3 border-t">
+      <div className="pt-3 border-t mt-3">
         <div className="flex gap-2">
           <Textarea
             ref={textareaRef}
@@ -246,6 +226,45 @@ export const FinancialAdvisorChat = () => {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* FAB trigger - stacked above the transaction FAB */}
+      <Button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-lg"
+        size="icon"
+      >
+        <Bot className="h-6 w-6" />
+      </Button>
+
+      {/* Desktop: Sheet from right */}
+      {!isMobile ? (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetContent side="right" className="w-[420px] sm:max-w-[420px] flex flex-col p-5">
+            <SheetHeader className="pb-0">
+              <SheetTitle className="text-base">Consultor Financeiro</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-hidden mt-2">
+              {chatContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        /* Mobile: Drawer from bottom */
+        <Drawer open={isOpen} onOpenChange={setIsOpen}>
+          <DrawerContent className="h-[85vh] px-4 pb-4">
+            <DrawerHeader className="px-0 pb-0">
+              <DrawerTitle className="text-base">Consultor Financeiro</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex-1 overflow-hidden mt-2">
+              {chatContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
+    </>
   );
 };
 
