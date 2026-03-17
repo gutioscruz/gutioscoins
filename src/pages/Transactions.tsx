@@ -188,35 +188,13 @@ const Transactions = () => {
 
         <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} />
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <TransactionList 
-              transactions={transactions} 
-              categories={categories} 
-              banks={banks}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          </div>
-          <div className="space-y-6">
-            <InteractivePieChart
-              transactions={transactions}
-              categories={categories}
-              type="category"
-              onSliceClick={handleCategorySliceClick}
-              activeIndex={activeCategoryIndex}
-              onActiveIndexChange={setActiveCategoryIndex}
-            />
-            <InteractivePieChart
-              transactions={transactions}
-              categories={categories}
-              type="subcategory"
-              onSliceClick={handleCategorySliceClick}
-              activeIndex={activeSubcategoryIndex}
-              onActiveIndexChange={setActiveSubcategoryIndex}
-            />
-          </div>
-        </div>
+        <TransactionList 
+          transactions={transactions} 
+          categories={categories} 
+          banks={banks}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
 
         {selectedCategory && (
           <CategoryDetailsDialog

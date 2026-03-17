@@ -1,6 +1,4 @@
-import { Button } from "@/components/ui/button";
 import { Bank } from "@/types/finance";
-import { cn } from "@/lib/utils";
 
 interface BankFilterChipsProps {
   banks: Bank[];
@@ -14,35 +12,33 @@ export const BankFilterChips = ({
   onBankChange,
 }: BankFilterChipsProps) => {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-      <Button
-        variant={selectedBank === "" ? "default" : "outline"}
-        size="sm"
+    <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+      <button
         onClick={() => onBankChange("")}
-        className="shrink-0 transition-all"
+        className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
+          selectedBank === ""
+            ? "bg-foreground text-background"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
       >
         Todos
-      </Button>
+      </button>
       {banks.map((bank) => (
-        <Button
+        <button
           key={bank.id}
-          variant={selectedBank === bank.id ? "default" : "outline"}
-          size="sm"
           onClick={() => onBankChange(bank.id)}
-          className={cn(
-            "shrink-0 transition-all",
-            selectedBank !== bank.id && "hover:border-2"
-          )}
-          style={{
-            borderColor: selectedBank !== bank.id ? bank.color : undefined,
-          }}
+          className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+            selectedBank === bank.id
+              ? "bg-foreground text-background"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           <div
-            className="w-2 h-2 rounded-full mr-1.5"
+            className="w-2 h-2 rounded-full"
             style={{ backgroundColor: bank.color }}
           />
           {bank.name}
-        </Button>
+        </button>
       ))}
     </div>
   );

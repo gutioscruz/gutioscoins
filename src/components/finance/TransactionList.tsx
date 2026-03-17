@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, LayoutGrid, Table as TableIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Transaction, Category, Bank } from "@/types/finance";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -11,7 +9,6 @@ import { TransactionTable } from "./TransactionTable";
 import { BankFilterChips } from "./BankFilterChips";
 import { AnticipateTransactionDialog } from "./AnticipateTransactionDialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/utils";
 
 interface TransactionListProps {
@@ -94,11 +91,7 @@ export const TransactionList = ({
     });
 
     map.forEach((txs, key) => {
-      groups.push({
-        key,
-        label: getDateLabel(txs[0].date),
-        transactions: txs,
-      });
+      groups.push({ key, label: getDateLabel(txs[0].date), transactions: txs });
     });
 
     return groups;
@@ -107,87 +100,98 @@ export const TransactionList = ({
   const transactionCount = filteredTransactions.length;
   const totalCount = transactions.length;
 
+  const filterOptions = [
+    { value: "all", label: "Todas" },
+    { value: "income", label: "Receitas" },
+    { value: "expense", label: "Despesas" },
+  ];
+
   return (
-    <Card className="p-6 border-none shadow-md">
-      <div className="space-y-4">
-        {/* Header with title, filters, and view toggle */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-foreground">Transações</h2>
-              <Badge variant="secondary" className="text-xs">
-                {transactionCount === totalCount
-                  ? `${totalCount}`
-                  : `${transactionCount}/${totalCount}`}
-              </Badge>
-            </div>
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="cards" className="px-2 h-7">
-                  <LayoutGrid className="h-4 w-4" />
-                </TabsTrigger>
-                <TabsTrigger value="table" className="px-2 h-7">
-                  <TableIcon className="h-4 w-4" />
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+    <div className="space-y-5">
+      {/* Header bar — stealth aesthetic */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-foreground">Transações</h2>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {transactionCount === totalCount
+                ? `${totalCount}`
+                : `${transactionCount} de ${totalCount}`}
+            </span>
           </div>
-
-          {/* Inline quick filters */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <ToggleGroup
-              type="single"
-              value={filterType}
-              onValueChange={(v) => v && setFilterType(v)}
-              className="gap-1"
-            >
-              <ToggleGroupItem value="all" size="sm" className="text-xs px-3 h-7 rounded-full data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                Todas
-              </ToggleGroupItem>
-              <ToggleGroupItem value="income" size="sm" className="text-xs px-3 h-7 rounded-full data-[state=on]:bg-income data-[state=on]:text-income-foreground">
-                Receitas
-              </ToggleGroupItem>
-              <ToggleGroupItem value="expense" size="sm" className="text-xs px-3 h-7 rounded-full data-[state=on]:bg-expense data-[state=on]:text-expense-foreground">
-                Despesas
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-
-          {/* Bank Filter Chips */}
-          {showBankFilter && banks.length > 0 && (
-            <BankFilterChips
-              banks={banks}
-              selectedBank={internalSelectedBank}
-              onBankChange={handleBankChange}
-            />
-          )}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList className="h-8 bg-transparent p-0 gap-1">
+              <TabsTrigger
+                value="cards"
+                className="px-2 h-7 data-[state=active]:bg-accent data-[state=active]:shadow-none bg-transparent shadow-none"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger
+                value="table"
+                className="px-2 h-7 data-[state=active]:bg-accent data-[state=active]:shadow-none bg-transparent shadow-none"
+              >
+                <TableIcon className="h-4 w-4" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {viewMode === "table" ? (
-          <TransactionTable
-            transactions={filteredTransactions}
-            categories={categories}
-            banks={banks}
-            filterType={filterType as "all" | "income" | "expense"}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ) : (
-          <div className="space-y-1">
-            {filteredTransactions.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhuma transação encontrada</p>
-            ) : (
-              groupedTransactions.map((group) => (
-                <div key={group.key} className="space-y-1">
-                  {/* Date group header */}
-                  <div className="flex items-center gap-3 pt-3 pb-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {group.label}
-                    </span>
-                    <Separator className="flex-1" />
-                  </div>
+        {/* Stealth type filters */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1">
+            {filterOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFilterType(opt.value)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
+                  filterType === opt.value
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                  {/* Transaction rows */}
+        {/* Bank chips — stealth */}
+        {showBankFilter && banks.length > 0 && (
+          <BankFilterChips
+            banks={banks}
+            selectedBank={internalSelectedBank}
+            onBankChange={handleBankChange}
+          />
+        )}
+      </div>
+
+      {/* Content */}
+      {viewMode === "table" ? (
+        <TransactionTable
+          transactions={filteredTransactions}
+          categories={categories}
+          banks={banks}
+          filterType={filterType as "all" | "income" | "expense"}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filteredTransactions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-12 text-sm">Nenhuma transação encontrada</p>
+          ) : (
+            groupedTransactions.map((group) => (
+              <div key={group.key}>
+                {/* Date group header */}
+                <div className="px-1 pt-4 pb-2">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                    {group.label}
+                  </span>
+                </div>
+
+                {/* Transaction cards */}
+                <div className="flex flex-col gap-1">
                   {group.transactions.map((transaction) => (
                     <TransactionRow
                       key={transaction.id}
@@ -199,12 +203,12 @@ export const TransactionList = ({
                     />
                   ))}
                 </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    </Card>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -221,20 +225,20 @@ const TransactionRow = ({ transaction, categories, banks, onEdit, onDelete }: Tr
   const bank = banks.find((b) => b.id === transaction.bankId);
 
   return (
-    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-secondary/40 transition-colors group">
+    <div className="flex items-center justify-between px-3 py-3 rounded-xl hover:bg-accent/50 transition-colors group cursor-default">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* Icon */}
         <div
           className={`flex items-center justify-center w-9 h-9 rounded-full shrink-0 ${
             transaction.type === "income"
-              ? "bg-income-light text-income"
-              : "bg-expense-light text-expense"
+              ? "bg-income/10 text-income"
+              : "bg-expense/10 text-expense"
           }`}
         >
           {transaction.type === "income" ? (
-            <ArrowUpCircle className="w-4.5 h-4.5" />
+            <ArrowUpCircle className="w-[18px] h-[18px]" />
           ) : (
-            <ArrowDownCircle className="w-4.5 h-4.5" />
+            <ArrowDownCircle className="w-[18px] h-[18px]" />
           )}
         </div>
 
@@ -243,14 +247,14 @@ const TransactionRow = ({ transaction, categories, banks, onEdit, onDelete }: Tr
           <p className="font-semibold text-sm text-foreground truncate">
             {transaction.description}
           </p>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
             <span className="truncate">
               {category?.name}
               {transaction.subcategory && ` · ${transaction.subcategory}`}
             </span>
             {bank && (
               <>
-                <span>·</span>
+                <span className="opacity-40">·</span>
                 <div className="flex items-center gap-1 shrink-0">
                   <div
                     className="w-1.5 h-1.5 rounded-full"
@@ -262,10 +266,10 @@ const TransactionRow = ({ transaction, categories, banks, onEdit, onDelete }: Tr
             )}
             {transaction.isInstallment && transaction.installmentNumber && transaction.installmentCount && (
               <>
-                <span>·</span>
-                <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal">
+                <span className="opacity-40">·</span>
+                <span className="font-medium">
                   {transaction.installmentNumber}/{transaction.installmentCount}x
-                </Badge>
+                </span>
               </>
             )}
           </div>
