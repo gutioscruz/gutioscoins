@@ -581,18 +581,29 @@ const Loans = () => {
                             />
                           </div>
                           
-                          {installmentsToPayAhead && (
-                            <div className="p-3 bg-muted rounded-lg">
-                              <p className="text-sm text-muted-foreground mb-1">Valor total a pagar</p>
-                              <p className="text-2xl font-bold text-primary">
-                                R$ {(loan.payments
-                                  .filter(p => !p.paid)
-                                  .slice(0, parseInt(installmentsToPayAhead))
-                                  .reduce((sum, p) => sum + p.amount, 0)
-                                  .toFixed(2))}
-                              </p>
-                            </div>
-                          )}
+                          {installmentsToPayAhead && (() => {
+                            const unpaid = loan.payments.filter(p => !p.paid);
+                            const selected = unpaid.slice(0, parseInt(installmentsToPayAhead));
+                            const totalOriginal = selected.reduce((sum, p) => sum + p.amount, 0);
+                            const totalPrincipalOnly = selected.reduce((sum, p) => sum + p.principal, 0);
+                            const totalSaved = totalOriginal - totalPrincipalOnly;
+                            return (
+                              <div className="p-3 bg-muted rounded-lg space-y-2">
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                  <span>Valor original ({selected.length}x):</span>
+                                  <span className="line-through">R$ {totalOriginal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                  <span>Juros eliminados:</span>
+                                  <span className="text-green-500 font-medium">− R$ {totalSaved.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm font-semibold border-t pt-2">
+                                  <span>Valor com desconto (só amortização):</span>
+                                  <span className="text-2xl font-bold text-primary">R$ {totalPrincipalOnly.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                           
                           <Button
                             className="w-full"
