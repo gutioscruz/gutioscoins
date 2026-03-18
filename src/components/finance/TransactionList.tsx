@@ -42,6 +42,8 @@ export const TransactionList = ({
   selectedBank = "",
   onBankChange,
   showBankFilter = true,
+  sortOrder = "desc",
+  onSortOrderChange,
 }: TransactionListProps) => {
   const [filterType, setFilterType] = useState<string>("all");
   const [internalSelectedBank, setInternalSelectedBank] = useState(selectedBank);
