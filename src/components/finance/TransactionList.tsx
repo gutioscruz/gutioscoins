@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Transaction, Category, Bank } from "@/types/finance";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
