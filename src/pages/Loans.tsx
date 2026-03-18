@@ -112,7 +112,12 @@ const Loans = () => {
   
   const handlePayAhead = (loanId: string) => {
     if (!loanId || !installmentsToPayAhead) return;
-    payLoanInstallmentsAhead({ loanId, count: parseInt(installmentsToPayAhead) });
+    const loan = loans.find(l => l.id === loanId);
+    if (!loan) return;
+    const count = parseInt(installmentsToPayAhead);
+    const unpaid = loan.payments.filter(p => !p.paid).slice(0, count);
+    const totalInterestDiscount = unpaid.reduce((sum, p) => sum + p.interest, 0);
+    payLoanInstallmentsAhead({ loanId, count, discount: totalInterestDiscount });
     setInstallmentsToPayAhead("");
   };
   
