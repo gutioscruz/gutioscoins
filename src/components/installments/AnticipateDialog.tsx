@@ -167,15 +167,23 @@ export function AnticipateDialog({
             </Popover>
           </div>
 
-          {selectedInstallmentData && selectedBank && (
-            <div className="p-4 bg-muted rounded-lg">
+          {selectedInstallmentData && (
+            <div className="p-4 bg-muted rounded-lg space-y-2">
               <p className="text-sm font-medium mb-1">Resumo</p>
-              <p className="text-sm text-muted-foreground">
-                Valor a debitar:{" "}
-                <span className="font-semibold text-foreground">
-                  {formatCurrency(selectedInstallmentData.amount)}
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Valor original da parcela:</span>
+                <span className="line-through">{formatCurrency(selectedInstallmentData.amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Juros eliminados:</span>
+                <span className="text-income font-medium">
+                  − {formatCurrency(selectedInstallmentData.amount - (selectedInstallmentData as any).principal)}
                 </span>
-              </p>
+              </div>
+              <div className="flex justify-between text-sm font-semibold text-foreground border-t pt-2">
+                <span>Valor com desconto (só amortização):</span>
+                <span>{formatCurrency((selectedInstallmentData as any).principal)}</span>
+              </div>
             </div>
           )}
         </div>
