@@ -34,7 +34,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r transition-all duration-300">
+    <Sidebar collapsible="icon" className="border-r-0 transition-all duration-300">
       <div className="h-14 flex items-center px-3 border-b transition-all duration-300">
         <div className="flex items-center gap-2">
           <div className={`flex items-center justify-center rounded-lg bg-primary transition-all duration-300 ${
@@ -54,7 +54,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1 p-2">
+            <SidebarMenu className="space-y-1.5 p-2">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 

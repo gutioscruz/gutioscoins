@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Transaction, Category, Bank } from "@/types/finance";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -17,6 +17,8 @@ interface TransactionListProps {
   selectedBank?: string;
   onBankChange?: (bankId: string) => void;
   showBankFilter?: boolean;
+  sortOrder?: "asc" | "desc";
+  onSortOrderChange?: (order: "asc" | "desc") => void;
 }
 
 function getDateLabel(dateStr: string | Date): string {
@@ -40,6 +42,8 @@ export const TransactionList = ({
   selectedBank = "",
   onBankChange,
   showBankFilter = true,
+  sortOrder = "desc",
+  onSortOrderChange,
 }: TransactionListProps) => {
   const [filterType, setFilterType] = useState<string>("all");
   const [internalSelectedBank, setInternalSelectedBank] = useState(selectedBank);
@@ -65,7 +69,7 @@ export const TransactionList = ({
     const sorted = [...filteredTransactions].sort((a, b) => {
       const da = typeof a.date === "string" ? parseISO(a.date as string) : a.date;
       const db = typeof b.date === "string" ? parseISO(b.date as string) : b.date;
-      return db.getTime() - da.getTime();
+      return sortOrder === "desc" ? db.getTime() - da.getTime() : da.getTime() - db.getTime();
     });
 
     const groups: Array<{ key: string; label: string; transactions: Transaction[] }> = [];
@@ -82,7 +86,7 @@ export const TransactionList = ({
     });
 
     return groups;
-  }, [filteredTransactions]);
+  }, [filteredTransactions, sortOrder]);
 
   const transactionCount = filteredTransactions.length;
   const totalCount = transactions.length;
@@ -106,7 +110,7 @@ export const TransactionList = ({
           </span>
         </div>
 
-        {/* Stealth type filters */}
+        {/* Stealth type filters + sort */}
         <div className="flex items-center gap-1">
           {filterOptions.map((opt) => (
             <button
@@ -121,6 +125,16 @@ export const TransactionList = ({
               {opt.label}
             </button>
           ))}
+
+          {onSortOrderChange && (
+            <button
+              onClick={() => onSortOrderChange(sortOrder === "desc" ? "asc" : "desc")}
+              className="ml-1 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all"
+              title={sortOrder === "desc" ? "Mais antigas primeiro" : "Mais recentes primeiro"}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Bank chips */}
