@@ -167,7 +167,7 @@ export function AnticipateDialog({
             </Popover>
           </div>
 
-          {selectedInstallmentData && selectedBank && (
+          {selectedInstallmentData && (createTransaction ? selectedBank : true) && (
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm font-medium mb-1">Resumo</p>
               <p className="text-sm text-muted-foreground">

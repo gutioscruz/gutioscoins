@@ -100,7 +100,10 @@ export const useLoans = () => {
 
       if (loanError) throw loanError;
 
+      // === Tabela Price (Sistema de Amortização Francês) ===
       const payments = [];
+      let remainingBalance = loan.principal;
+
       for (let i = 1; i <= loan.installments; i++) {
         const dueDate = new Date(loan.startDate);
         
@@ -112,16 +115,17 @@ export const useLoans = () => {
           dueDate.setDate(dueDate.getDate() + (i * 7));
         }
 
-        const interestPayment = totalInterest / loan.installments;
-        const principalPayment = loan.principal / loan.installments;
+        const interestPayment = remainingBalance * periodRate;
+        const principalPayment = monthlyPayment - interestPayment;
+        remainingBalance = remainingBalance - principalPayment;
 
         payments.push({
           loan_id: loanData.id,
           installment_number: i,
           due_date: dueDate.toISOString(),
-          amount: monthlyPayment,
-          principal: principalPayment,
-          interest: interestPayment,
+          amount: Number(monthlyPayment.toFixed(2)),
+          principal: Number(principalPayment.toFixed(2)),
+          interest: Number(interestPayment.toFixed(2)),
           paid: false,
         });
       }
