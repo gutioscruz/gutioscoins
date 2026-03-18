@@ -110,7 +110,7 @@ export const TransactionList = ({
           </span>
         </div>
 
-        {/* Stealth type filters */}
+        {/* Stealth type filters + sort */}
         <div className="flex items-center gap-1">
           {filterOptions.map((opt) => (
             <button
