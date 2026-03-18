@@ -69,7 +69,7 @@ export const TransactionList = ({
     const sorted = [...filteredTransactions].sort((a, b) => {
       const da = typeof a.date === "string" ? parseISO(a.date as string) : a.date;
       const db = typeof b.date === "string" ? parseISO(b.date as string) : b.date;
-      return db.getTime() - da.getTime();
+      return sortOrder === "desc" ? db.getTime() - da.getTime() : da.getTime() - db.getTime();
     });
 
     const groups: Array<{ key: string; label: string; transactions: Transaction[] }> = [];
