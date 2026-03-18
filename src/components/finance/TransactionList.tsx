@@ -125,6 +125,16 @@ export const TransactionList = ({
               {opt.label}
             </button>
           ))}
+
+          {onSortOrderChange && (
+            <button
+              onClick={() => onSortOrderChange(sortOrder === "desc" ? "asc" : "desc")}
+              className="ml-1 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all"
+              title={sortOrder === "desc" ? "Mais antigas primeiro" : "Mais recentes primeiro"}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Bank chips */}
