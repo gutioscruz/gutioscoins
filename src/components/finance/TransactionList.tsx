@@ -86,7 +86,7 @@ export const TransactionList = ({
     });
 
     return groups;
-  }, [filteredTransactions]);
+  }, [filteredTransactions, sortOrder]);
 
   const transactionCount = filteredTransactions.length;
   const totalCount = transactions.length;
