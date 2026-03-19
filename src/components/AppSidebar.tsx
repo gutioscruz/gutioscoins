@@ -1,4 +1,4 @@
-import { Receipt, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, TrendingDown, PanelLeft, Layers } from "lucide-react";
+import { Receipt, Tag, Building2, PiggyBank, Repeat, Target, BarChart3, Moon, Sun, Coins, PanelLeft, Layers } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
   SidebarMenuItem,
   useSidebar,
   SidebarFooter,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 const items = [
@@ -35,9 +34,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 transition-all duration-300">
-      <div className="h-14 flex items-center px-3 border-b transition-all duration-300">
+      <div className="h-14 flex items-center px-3 transition-all duration-300">
         <div className="flex items-center gap-2">
-          <div className={`flex items-center justify-center rounded-lg bg-primary transition-all duration-300 ${
+          <div className={`flex items-center justify-center rounded-2xl bg-primary transition-all duration-300 ${
             collapsed ? 'w-7 h-7' : 'w-8 h-8'
           }`}>
             <Coins className={`text-primary-foreground transition-all duration-300 ${
@@ -54,7 +53,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1.5 p-2">
+            <SidebarMenu className="space-y-2 p-2">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
@@ -65,7 +64,7 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end={item.url === "/"}
-                      className="flex items-center text-base font-medium transition-colors w-full"
+                      className="flex items-center text-base font-medium transition-all duration-300 w-full"
                       title={item.title}
                     >
                       <item.icon className={`shrink-0 transition-all duration-300 ${
@@ -87,7 +86,7 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-full justify-start h-11 px-3"
+          className="w-full justify-start h-11 px-3 rounded-full hover:bg-accent/20"
           title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
         >
           {theme === "dark" ? (
@@ -113,7 +112,7 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           onClick={toggleSidebar}
-          className="w-full justify-start h-11 px-3"
+          className="w-full justify-start h-11 px-3 rounded-full hover:bg-accent/20"
           title="Painel Lateral"
         >
           <PanelLeft className={`shrink-0 transition-all duration-300 ${
