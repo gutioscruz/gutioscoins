@@ -114,7 +114,7 @@ const Banks = () => {
   const handleDeleteInvestment = (id: string) => { deleteInvestment(id); setDeleteInvestmentConfirm(null); };
 
   const resetBankDialog = () => { setBankDialogOpen(false); setEditingBankId(null); setBankFormData({ name: "", type: "checking", balance: "", limit: "", color: "#10b981" }); };
-  const resetCardDialog = () => { setCardDialogOpen(false); setEditingCardData(null); setCardFormData({ name: "", limit: "", used: "0", color: "#10b981", autoDebit: false, autoDebitBankId: "" }); };
+  const resetCardDialog = () => { setCardDialogOpen(false); setEditingCardData(null); setCardFormData({ name: "", limit: "", used: "0", color: "#10b981", closingDay: "1", dueDay: "10", autoDebit: false, autoDebitBankId: "" }); };
   const resetInvestmentDialog = () => { setInvestmentDialogOpen(false); setEditingInvestmentId(null); setInvestmentFormData({ name: "", type: "fixed-income", amount: "", profitability: "", color: "#10b981" }); };
 
   const openEditBankDialog = (bankId: string) => {
