@@ -86,6 +86,8 @@ const Banks = () => {
     const cardData = {
       name: cardFormData.name, limit: Number(cardFormData.limit) || 0,
       used: Number(cardFormData.used) || 0, color: cardFormData.color,
+      closingDay: Number(cardFormData.closingDay) || 1,
+      dueDay: Number(cardFormData.dueDay) || 10,
       autoDebit: cardFormData.autoDebit,
       autoDebitBankId: cardFormData.autoDebit ? cardFormData.autoDebitBankId : undefined,
     };
