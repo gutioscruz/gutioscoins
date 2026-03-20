@@ -59,6 +59,8 @@ export const useCards = () => {
           limit_amount: validated.limit,
           used_amount: validated.used,
           color: validated.color,
+          closing_day: card.closingDay || 1,
+          due_day: card.dueDay || 10,
           auto_debit: card.autoDebit || false,
           auto_debit_bank_id: card.autoDebitBankId || null,
         })
