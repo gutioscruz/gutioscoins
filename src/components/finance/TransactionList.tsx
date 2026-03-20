@@ -72,10 +72,10 @@ export const TransactionList = ({
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const matchesType = filterType === "all" || t.type === filterType;
-      const matchesBank = !internalSelectedBank || t.bankId === internalSelectedBank;
+      const matchesBank = !currentSelectedBank || t.bankId === currentSelectedBank;
       return matchesType && matchesBank;
     });
-  }, [transactions, filterType, internalSelectedBank]);
+  }, [transactions, filterType, currentSelectedBank]);
 
   const groupedTransactions = useMemo(() => {
     const sorted = [...filteredTransactions].sort((a, b) => {
