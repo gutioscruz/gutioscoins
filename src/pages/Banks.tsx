@@ -327,7 +327,7 @@ const Banks = () => {
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 <p className="text-sm font-semibold text-income tabular-nums">{formatCurrency(card.limit - card.used)}</p>
-                                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full" title="Ver Fatura" onClick={() => setStatementDialogData({ card, bankId: bank.id })}>
                                     <Receipt className="h-3 w-3" />
                                   </Button>
