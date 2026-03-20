@@ -274,7 +274,7 @@ const Banks = () => {
               {banks.map((bank) => {
                 const Icon = bankTypeIcons[bank.type];
                 return (
-                  <div key={bank.id} className="rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
+                  <div key={bank.id} className="group rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
                     <div className="h-1 rounded-t-2xl" style={{ backgroundColor: bank.color }} />
                     <div className="p-5 space-y-4">
                       {/* Bank header */}
