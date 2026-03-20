@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2, Building2, CreditCard, Wallet, TrendingUp, PiggyBank, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -58,7 +58,7 @@ const Banks = () => {
     name: "", type: "checking" as BankType, balance: "", limit: "", color: "#10b981",
   });
   const [cardFormData, setCardFormData] = useState({
-    name: "", limit: "", used: "0", color: "#10b981", autoDebit: false, autoDebitBankId: "",
+    name: "", limit: "", used: "0", color: "#10b981", closingDay: "1", dueDay: "10", autoDebit: false, autoDebitBankId: "",
   });
   const [investmentFormData, setInvestmentFormData] = useState({
     name: "", type: "fixed-income" as InvestmentType, amount: "", profitability: "", color: "#10b981",
@@ -86,6 +86,8 @@ const Banks = () => {
     const cardData = {
       name: cardFormData.name, limit: Number(cardFormData.limit) || 0,
       used: Number(cardFormData.used) || 0, color: cardFormData.color,
+      closingDay: Number(cardFormData.closingDay) || 1,
+      dueDay: Number(cardFormData.dueDay) || 10,
       autoDebit: cardFormData.autoDebit,
       autoDebitBankId: cardFormData.autoDebit ? cardFormData.autoDebitBankId : undefined,
     };
@@ -112,7 +114,7 @@ const Banks = () => {
   const handleDeleteInvestment = (id: string) => { deleteInvestment(id); setDeleteInvestmentConfirm(null); };
 
   const resetBankDialog = () => { setBankDialogOpen(false); setEditingBankId(null); setBankFormData({ name: "", type: "checking", balance: "", limit: "", color: "#10b981" }); };
-  const resetCardDialog = () => { setCardDialogOpen(false); setEditingCardData(null); setCardFormData({ name: "", limit: "", used: "0", color: "#10b981", autoDebit: false, autoDebitBankId: "" }); };
+  const resetCardDialog = () => { setCardDialogOpen(false); setEditingCardData(null); setCardFormData({ name: "", limit: "", used: "0", color: "#10b981", closingDay: "1", dueDay: "10", autoDebit: false, autoDebitBankId: "" }); };
   const resetInvestmentDialog = () => { setInvestmentDialogOpen(false); setEditingInvestmentId(null); setInvestmentFormData({ name: "", type: "fixed-income", amount: "", profitability: "", color: "#10b981" }); };
 
   const openEditBankDialog = (bankId: string) => {
@@ -128,7 +130,7 @@ const Banks = () => {
     const card = bank?.cards?.find(c => c.id === cardId);
     if (!card) return;
     setEditingCardData({ bankId, cardId });
-    setCardFormData({ name: card.name, limit: card.limit.toString(), used: card.used.toString(), color: card.color, autoDebit: card.autoDebit || false, autoDebitBankId: card.autoDebitBankId || "" });
+    setCardFormData({ name: card.name, limit: card.limit.toString(), used: card.used.toString(), color: card.color, closingDay: (card.closingDay || 1).toString(), dueDay: (card.dueDay || 10).toString(), autoDebit: card.autoDebit || false, autoDebitBankId: card.autoDebitBankId || "" });
     setCardDialogOpen(true);
   };
 
@@ -142,10 +144,10 @@ const Banks = () => {
     setInvestmentDialogOpen(true);
   };
 
-  const totalBalance = banks.filter(b => b.type !== "credit").reduce((sum, b) => sum + (b.balance || 0), 0);
-  const totalCreditUsed = banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.balance || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.used, 0);
-  const totalCreditLimit = banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.limit || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.limit, 0);
-  const totalInvestments = investments.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalBalance = useMemo(() => banks.filter(b => b.type !== "credit").reduce((sum, b) => sum + (b.balance || 0), 0), [banks]);
+  const totalCreditUsed = useMemo(() => banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.balance || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.used, 0), [banks]);
+  const totalCreditLimit = useMemo(() => banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.limit || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.limit, 0), [banks]);
+  const totalInvestments = useMemo(() => investments.reduce((sum, inv) => sum + inv.amount, 0), [investments]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,7 +274,7 @@ const Banks = () => {
               {banks.map((bank) => {
                 const Icon = bankTypeIcons[bank.type];
                 return (
-                  <div key={bank.id} className="rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
+                  <div key={bank.id} className="group rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
                     <div className="h-1 rounded-t-2xl" style={{ backgroundColor: bank.color }} />
                     <div className="p-5 space-y-4">
                       {/* Bank header */}
@@ -286,7 +288,7 @@ const Banks = () => {
                             <p className="text-xs text-muted-foreground">{bankTypeLabels[bank.type]}</p>
                           </div>
                         </div>
-                        <div className="flex gap-0.5 opacity-0 hover:opacity-100 transition-opacity">
+                         <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full" onClick={() => openEditBankDialog(bank.id)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -325,7 +327,7 @@ const Banks = () => {
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 <p className="text-sm font-semibold text-income tabular-nums">{formatCurrency(card.limit - card.used)}</p>
-                                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full" title="Ver Fatura" onClick={() => setStatementDialogData({ card, bankId: bank.id })}>
                                     <Receipt className="h-3 w-3" />
                                   </Button>
@@ -475,6 +477,16 @@ const Banks = () => {
                 <div className="flex gap-2">
                   <Input id="card-color" type="color" value={cardFormData.color} onChange={(e) => setCardFormData({ ...cardFormData, color: e.target.value })} className="w-20 h-10" />
                   <Input value={cardFormData.color} onChange={(e) => setCardFormData({ ...cardFormData, color: e.target.value })} placeholder="#000000" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="closing-day">Dia de Fechamento</Label>
+                  <Input id="closing-day" type="number" min="1" max="31" placeholder="1" value={cardFormData.closingDay} onChange={(e) => setCardFormData({ ...cardFormData, closingDay: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="due-day">Dia de Vencimento</Label>
+                  <Input id="due-day" type="number" min="1" max="31" placeholder="10" value={cardFormData.dueDay} onChange={(e) => setCardFormData({ ...cardFormData, dueDay: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-3 p-3 rounded-xl bg-muted/30">

@@ -19,6 +19,8 @@ interface TransactionListProps {
   showBankFilter?: boolean;
   sortOrder?: "asc" | "desc";
   onSortOrderChange?: (order: "asc" | "desc") => void;
+  filterType?: string;
+  onFilterTypeChange?: (type: string) => void;
 }
 
 function getDateLabel(dateStr: string | Date): string {
@@ -44,26 +46,36 @@ export const TransactionList = ({
   showBankFilter = true,
   sortOrder = "desc",
   onSortOrderChange,
+  filterType: externalFilterType,
+  onFilterTypeChange,
 }: TransactionListProps) => {
-  const [filterType, setFilterType] = useState<string>("all");
+  const [internalFilterType, setInternalFilterType] = useState<string>("all");
   const [internalSelectedBank, setInternalSelectedBank] = useState(selectedBank);
 
+  const filterType = externalFilterType ?? internalFilterType;
+  const setFilterType = onFilterTypeChange ?? setInternalFilterType;
+
   useEffect(() => {
-    setInternalSelectedBank(selectedBank);
-  }, [selectedBank]);
+    if (!onBankChange) setInternalSelectedBank(selectedBank);
+  }, [selectedBank, onBankChange]);
+
+  const currentSelectedBank = onBankChange ? selectedBank : internalSelectedBank;
 
   const handleBankChange = (bankId: string) => {
-    setInternalSelectedBank(bankId);
-    onBankChange?.(bankId);
+    if (onBankChange) {
+      onBankChange(bankId);
+    } else {
+      setInternalSelectedBank(bankId);
+    }
   };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const matchesType = filterType === "all" || t.type === filterType;
-      const matchesBank = !internalSelectedBank || t.bankId === internalSelectedBank;
+      const matchesBank = !currentSelectedBank || t.bankId === currentSelectedBank;
       return matchesType && matchesBank;
     });
-  }, [transactions, filterType, internalSelectedBank]);
+  }, [transactions, filterType, currentSelectedBank]);
 
   const groupedTransactions = useMemo(() => {
     const sorted = [...filteredTransactions].sort((a, b) => {
@@ -141,7 +153,7 @@ export const TransactionList = ({
         {showBankFilter && banks.length > 0 && (
           <BankFilterChips
             banks={banks}
-            selectedBank={internalSelectedBank}
+            selectedBank={currentSelectedBank}
             onBankChange={handleBankChange}
           />
         )}
