@@ -479,6 +479,16 @@ const Banks = () => {
                   <Input value={cardFormData.color} onChange={(e) => setCardFormData({ ...cardFormData, color: e.target.value })} placeholder="#000000" />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="closing-day">Dia de Fechamento</Label>
+                  <Input id="closing-day" type="number" min="1" max="31" placeholder="1" value={cardFormData.closingDay} onChange={(e) => setCardFormData({ ...cardFormData, closingDay: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="due-day">Dia de Vencimento</Label>
+                  <Input id="due-day" type="number" min="1" max="31" placeholder="10" value={cardFormData.dueDay} onChange={(e) => setCardFormData({ ...cardFormData, dueDay: e.target.value })} />
+                </div>
+              </div>
               <div className="space-y-3 p-3 rounded-xl bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
