@@ -35,6 +35,8 @@ const Transactions = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [selectedBank, setSelectedBank] = useState<string>("");
 
   const [categoryDetailsOpen, setCategoryDetailsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(null);
