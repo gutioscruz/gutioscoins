@@ -153,7 +153,7 @@ export const TransactionList = ({
         {showBankFilter && banks.length > 0 && (
           <BankFilterChips
             banks={banks}
-            selectedBank={internalSelectedBank}
+            selectedBank={currentSelectedBank}
             onBankChange={handleBankChange}
           />
         )}

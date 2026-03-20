@@ -183,6 +183,10 @@ const Transactions = () => {
               onDelete={handleDelete}
               sortOrder={sortOrder}
               onSortOrderChange={setSortOrder}
+              filterType={filterType}
+              onFilterTypeChange={setFilterType}
+              selectedBank={selectedBank}
+              onBankChange={setSelectedBank}
             />
           </TabsContent>
 
