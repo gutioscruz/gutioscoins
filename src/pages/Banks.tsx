@@ -58,7 +58,7 @@ const Banks = () => {
     name: "", type: "checking" as BankType, balance: "", limit: "", color: "#10b981",
   });
   const [cardFormData, setCardFormData] = useState({
-    name: "", limit: "", used: "0", color: "#10b981", autoDebit: false, autoDebitBankId: "",
+    name: "", limit: "", used: "0", color: "#10b981", closingDay: "1", dueDay: "10", autoDebit: false, autoDebitBankId: "",
   });
   const [investmentFormData, setInvestmentFormData] = useState({
     name: "", type: "fixed-income" as InvestmentType, amount: "", profitability: "", color: "#10b981",
