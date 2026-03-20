@@ -19,6 +19,8 @@ interface TransactionListProps {
   showBankFilter?: boolean;
   sortOrder?: "asc" | "desc";
   onSortOrderChange?: (order: "asc" | "desc") => void;
+  filterType?: string;
+  onFilterTypeChange?: (type: string) => void;
 }
 
 function getDateLabel(dateStr: string | Date): string {
