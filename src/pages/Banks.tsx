@@ -144,10 +144,10 @@ const Banks = () => {
     setInvestmentDialogOpen(true);
   };
 
-  const totalBalance = banks.filter(b => b.type !== "credit").reduce((sum, b) => sum + (b.balance || 0), 0);
-  const totalCreditUsed = banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.balance || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.used, 0);
-  const totalCreditLimit = banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.limit || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.limit, 0);
-  const totalInvestments = investments.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalBalance = useMemo(() => banks.filter(b => b.type !== "credit").reduce((sum, b) => sum + (b.balance || 0), 0), [banks]);
+  const totalCreditUsed = useMemo(() => banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.balance || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.used, 0), [banks]);
+  const totalCreditLimit = useMemo(() => banks.filter(b => b.type === "credit").reduce((sum, b) => sum + (b.limit || 0), 0) + banks.flatMap(b => b.cards || []).reduce((sum, c) => sum + c.limit, 0), [banks]);
+  const totalInvestments = useMemo(() => investments.reduce((sum, inv) => sum + inv.amount, 0), [investments]);
 
   return (
     <div className="min-h-screen bg-background">
