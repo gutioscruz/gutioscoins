@@ -46,17 +46,27 @@ export const TransactionList = ({
   showBankFilter = true,
   sortOrder = "desc",
   onSortOrderChange,
+  filterType: externalFilterType,
+  onFilterTypeChange,
 }: TransactionListProps) => {
-  const [filterType, setFilterType] = useState<string>("all");
+  const [internalFilterType, setInternalFilterType] = useState<string>("all");
   const [internalSelectedBank, setInternalSelectedBank] = useState(selectedBank);
 
+  const filterType = externalFilterType ?? internalFilterType;
+  const setFilterType = onFilterTypeChange ?? setInternalFilterType;
+
   useEffect(() => {
-    setInternalSelectedBank(selectedBank);
-  }, [selectedBank]);
+    if (!onBankChange) setInternalSelectedBank(selectedBank);
+  }, [selectedBank, onBankChange]);
+
+  const currentSelectedBank = onBankChange ? selectedBank : internalSelectedBank;
 
   const handleBankChange = (bankId: string) => {
-    setInternalSelectedBank(bankId);
-    onBankChange?.(bankId);
+    if (onBankChange) {
+      onBankChange(bankId);
+    } else {
+      setInternalSelectedBank(bankId);
+    }
   };
 
   const filteredTransactions = useMemo(() => {
