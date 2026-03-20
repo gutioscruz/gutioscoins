@@ -288,7 +288,7 @@ const Banks = () => {
                             <p className="text-xs text-muted-foreground">{bankTypeLabels[bank.type]}</p>
                           </div>
                         </div>
-                        <div className="flex gap-0.5 opacity-0 hover:opacity-100 transition-opacity">
+                         <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full" onClick={() => openEditBankDialog(bank.id)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
