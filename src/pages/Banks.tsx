@@ -130,7 +130,7 @@ const Banks = () => {
     const card = bank?.cards?.find(c => c.id === cardId);
     if (!card) return;
     setEditingCardData({ bankId, cardId });
-    setCardFormData({ name: card.name, limit: card.limit.toString(), used: card.used.toString(), color: card.color, autoDebit: card.autoDebit || false, autoDebitBankId: card.autoDebitBankId || "" });
+    setCardFormData({ name: card.name, limit: card.limit.toString(), used: card.used.toString(), color: card.color, closingDay: (card.closingDay || 1).toString(), dueDay: (card.dueDay || 10).toString(), autoDebit: card.autoDebit || false, autoDebitBankId: card.autoDebitBankId || "" });
     setCardDialogOpen(true);
   };
 
