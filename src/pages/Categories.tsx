@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,6 +92,85 @@ const Categories = () => {
   const incomeCategories = categories.filter(c => c.type === "income");
   const expenseCategories = categories.filter(c => c.type === "expense");
 
+  const CategoryList = ({ items, type }: { items: Category[]; type: "income" | "expense" }) => (
+    <div className="space-y-2">
+      {items.map((category) => (
+        <div key={category.id} className="space-y-2">
+          <div className="group flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-all duration-200">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => toggleCategory(category.id)}
+              >
+                {expandedCategories.has(category.id) ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+              <span className="text-sm font-semibold">{category.name}</span>
+              <Badge variant="secondary" className="text-xs rounded-full">
+                {category.subcategories.length}
+              </Badge>
+            </div>
+            <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => openEditDialog(category)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive"
+                onClick={() => handleDeleteCategory(category.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          {expandedCategories.has(category.id) && (
+            <div className="ml-10 space-y-1.5">
+              {category.subcategories.map((sub) => (
+                <div key={sub} className="group flex items-center justify-between p-2.5 rounded-lg hover:bg-accent/20 transition-colors">
+                  <span className="text-sm text-muted-foreground">{sub}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleRemoveSubcategory(category.id, sub)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <Input
+                  placeholder="Nova subcategoria"
+                  value={newSubcategory}
+                  onChange={(e) => setNewSubcategory(e.target.value)}
+                  className="h-8 text-sm bg-background/50"
+                />
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={() => handleAddSubcategory(category.id)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
@@ -100,7 +178,7 @@ const Categories = () => {
           <h1 className="text-3xl font-bold">Categorias</h1>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2" onClick={() => setEditingCategory(null)}>
+              <Button className="gap-2 rounded-xl" onClick={() => setEditingCategory(null)}>
                 <Plus className="w-4 h-4" />
                 Nova Categoria
               </Button>
@@ -143,165 +221,33 @@ const Categories = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-income">
-            <CardHeader>
-              <CardTitle className="text-income">Receitas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {incomeCategories.map((category) => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => toggleCategory(category.id)}
-                      >
-                        {expandedCategories.has(category.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <span className="font-medium">{category.name}</span>
-                      <Badge variant="secondary">{category.subcategories.length}</Badge>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive"
-                        onClick={() => handleDeleteCategory(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {expandedCategories.has(category.id) && (
-                    <div className="ml-8 space-y-2">
-                      {category.subcategories.map((sub) => (
-                        <div key={sub} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                          <span className="text-sm">{sub}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive"
-                            onClick={() => handleRemoveSubcategory(category.id, sub)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Nova subcategoria"
-                          value={newSubcategory}
-                          onChange={(e) => setNewSubcategory(e.target.value)}
-                          className="h-8 text-sm"
-                        />
-                        <Button
-                          size="sm"
-                          className="h-8"
-                          onClick={() => handleAddSubcategory(category.id)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {/* Receitas */}
+          <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-income/10">
+                <TrendingUp className="h-5 w-5 text-income" />
+              </div>
+              <h2 className="text-lg font-semibold">Receitas</h2>
+              <Badge variant="secondary" className="rounded-full text-xs">
+                {incomeCategories.length}
+              </Badge>
+            </div>
+            <CategoryList items={incomeCategories} type="income" />
+          </div>
 
-          <Card className="border-expense">
-            <CardHeader>
-              <CardTitle className="text-expense">Despesas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {expenseCategories.map((category) => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => toggleCategory(category.id)}
-                      >
-                        {expandedCategories.has(category.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <span className="font-medium">{category.name}</span>
-                      <Badge variant="secondary">{category.subcategories.length}</Badge>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive"
-                        onClick={() => handleDeleteCategory(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {expandedCategories.has(category.id) && (
-                    <div className="ml-8 space-y-2">
-                      {category.subcategories.map((sub) => (
-                        <div key={sub} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                          <span className="text-sm">{sub}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive"
-                            onClick={() => handleRemoveSubcategory(category.id, sub)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Nova subcategoria"
-                          value={newSubcategory}
-                          onChange={(e) => setNewSubcategory(e.target.value)}
-                          className="h-8 text-sm"
-                        />
-                        <Button
-                          size="sm"
-                          className="h-8"
-                          onClick={() => handleAddSubcategory(category.id)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {/* Despesas */}
+          <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-muted">
+                <TrendingDown className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold">Despesas</h2>
+              <Badge variant="secondary" className="rounded-full text-xs">
+                {expenseCategories.length}
+              </Badge>
+            </div>
+            <CategoryList items={expenseCategories} type="expense" />
+          </div>
         </div>
       </main>
     </div>

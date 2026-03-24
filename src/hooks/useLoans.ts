@@ -94,6 +94,7 @@ export const useLoans = () => {
           total_paid: validated.totalPaid,
           category_id: validated.categoryId,
           subcategory: validated.subcategory,
+          loan_type: (loan as any).loanType || 'pessoal',
         })
         .select()
         .single();

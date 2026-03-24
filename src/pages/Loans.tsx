@@ -15,10 +15,11 @@ import { PaymentFrequency, LoanStatus } from "@/types/finance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type LoanType = 'consignado' | 'fatura_parcelada' | 'pessoal';
+type LoanType = 'consignado' | 'consignado_clt' | 'fatura_parcelada' | 'pessoal';
 
 const loanTypeLabels: Record<LoanType, string> = {
   consignado: 'Consignado',
+  consignado_clt: 'Consignado CLT',
   fatura_parcelada: 'Fatura Parcelada',
   pessoal: 'Pessoal',
 };
@@ -92,6 +93,7 @@ const Loans = () => {
       startDate: new Date(startDate),
       status: "active" as LoanStatus,
       bankId: bankId || undefined,
+      loanType,
     });
     
     setIsAddDialogOpen(false);
@@ -287,6 +289,7 @@ const Loans = () => {
                       <SelectContent>
                         <SelectItem value="pessoal">Pessoal</SelectItem>
                         <SelectItem value="consignado">Consignado</SelectItem>
+                        <SelectItem value="consignado_clt">Consignado CLT</SelectItem>
                         <SelectItem value="fatura_parcelada">Fatura Parcelada</SelectItem>
                       </SelectContent>
                     </Select>
@@ -417,11 +420,16 @@ const Loans = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
                         {loan.name}
                         <Badge className={getStatusColor(loan.status)}>
                           {getStatusLabel(loan.status)}
                         </Badge>
+                        {loan.loanType === 'consignado_clt' && (
+                          <Badge className="bg-income/10 text-income border-none text-xs">
+                            Desconto Automático em Folha
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>{loan.description}</CardDescription>
                     </div>
