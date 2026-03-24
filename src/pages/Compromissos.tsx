@@ -6,9 +6,7 @@ import {
   CreditCard, 
   Landmark, 
   TrendingDown,
-  Filter,
   DollarSign,
-  FastForward,
   Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +49,6 @@ const Compromissos = () => {
   const { loans, payLoanInstallment } = useLoans();
   const { banks } = useBanks();
 
-  const [kindFilter, setKindFilter] = useState<CommitmentKind | "all">("all");
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
 
   // Dialog states
@@ -60,48 +57,28 @@ const Compromissos = () => {
   const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const filteredCommitments = activeCommitments
-    .filter(c => kindFilter === "all" || c.kind === kindFilter)
-    .sort((a, b) => {
-      if (sortBy === "amount") {
-        return b.remainingAmount - a.remainingAmount;
-      }
-      // Sort by date
+  const installmentCommitments = activeCommitments.filter(c => c.kind === "installment");
+  const loanCommitments = activeCommitments.filter(c => c.kind === "loan");
+
+  const sortCommitments = (list: Commitment[]) =>
+    [...list].sort((a, b) => {
+      if (sortBy === "amount") return b.remainingAmount - a.remainingAmount;
       if (!a.nextDueDate && !b.nextDueDate) return 0;
       if (!a.nextDueDate) return 1;
       if (!b.nextDueDate) return -1;
       return a.nextDueDate.getTime() - b.nextDueDate.getTime();
     });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const getKindIcon = (kind: CommitmentKind) => {
-    return kind === "installment" ? CreditCard : Landmark;
-  };
-
-  const getKindLabel = (kind: CommitmentKind) => {
-    return kind === "installment" ? "Parcelamento" : "Empréstimo";
-  };
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
   const getUrgencyBadge = (commitment: Commitment) => {
     if (!commitment.nextDueDate) return null;
-    
-    const today = new Date();
     const daysUntilDue = Math.ceil(
-      (commitment.nextDueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      (commitment.nextDueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
-
-    if (daysUntilDue <= 0) {
-      return <Badge variant="destructive">Vence hoje</Badge>;
-    }
-    if (daysUntilDue <= 7) {
-      return <Badge variant="secondary">Em {daysUntilDue} dias</Badge>;
-    }
+    if (daysUntilDue <= 0) return <Badge variant="destructive" className="text-xs">Vence hoje</Badge>;
+    if (daysUntilDue <= 7) return <Badge variant="secondary" className="text-xs">Em {daysUntilDue} dias</Badge>;
     return null;
   };
 
@@ -140,7 +117,6 @@ const Compromissos = () => {
           });
         }
       } else {
-        // For loans, pay each selected installment
         for (const installmentId of data.selectedIds) {
           payLoanInstallment({
             loanId: data.commitment.originalId,
@@ -151,7 +127,6 @@ const Compromissos = () => {
           });
         }
       }
-
       toast.success(`${data.selectedIds.length} parcela(s) paga(s) com sucesso!`);
       setPayDialogOpen(false);
     } catch (error: any) {
@@ -161,7 +136,6 @@ const Compromissos = () => {
     }
   };
 
-  // Get related data for details dialog
   const getInstallmentGroup = (commitment: Commitment | null) => {
     if (!commitment || commitment.kind !== "installment") return undefined;
     return installmentGroups.find(g => g.id === commitment.originalId);
@@ -180,6 +154,93 @@ const Compromissos = () => {
     );
   }
 
+  const CommitmentCard = ({ commitment }: { commitment: Commitment }) => {
+    const Icon = commitment.kind === "installment" ? CreditCard : Landmark;
+    const progress = ((commitment.totalCount - commitment.remainingCount) / commitment.totalCount) * 100;
+    const isConsignado = commitment.kind === "loan" && 
+      loans.find(l => l.id === commitment.originalId)?.loanType === "consignado_clt";
+
+    return (
+      <div className="group rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-4 hover:shadow-md transition-all duration-300">
+        <div className="flex items-start gap-4">
+          <div className="p-2.5 rounded-xl bg-muted shrink-0 mt-0.5">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <p className="text-sm font-semibold truncate">{commitment.title}</p>
+              {getUrgencyBadge(commitment)}
+              {isConsignado && (
+                <Badge className="bg-income/10 text-income border-none text-xs">
+                  Desconto em Folha
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {commitment.origin}
+              {commitment.categoryName && ` • ${commitment.categoryName}`}
+              {" • "}
+              {commitment.totalCount - commitment.remainingCount}/{commitment.totalCount} parcelas
+            </p>
+
+            {/* Progress bar */}
+            <div className="mt-2.5 w-full bg-muted rounded-full h-1.5">
+              <div 
+                className="bg-primary h-1.5 rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <div className="flex gap-2 mt-3">
+              <Button 
+                variant="default" 
+                size="sm"
+                className="rounded-xl h-8 text-xs"
+                onClick={() => handlePay(commitment)}
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-1" />
+                Pagar
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="rounded-xl h-8 text-xs"
+                onClick={() => handleDetails(commitment)}
+              >
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Detalhes
+              </Button>
+            </div>
+          </div>
+
+          <div className="text-right shrink-0">
+            <p className="text-sm font-semibold">
+              {formatCurrency(commitment.monthlyAmount)}
+              <span className="text-xs text-muted-foreground font-normal">/mês</span>
+            </p>
+            {commitment.nextDueDate && (
+              <p className="text-xs text-muted-foreground flex items-center justify-end gap-1 mt-0.5">
+                <Calendar className="h-3 w-3" />
+                {format(commitment.nextDueDate, "dd/MM", { locale: ptBR })}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Restam {formatCurrency(commitment.remainingAmount)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const EmptyState = ({ message }: { message: string }) => (
+    <div className="rounded-2xl bg-card/40 backdrop-blur-sm border-none p-12 flex flex-col items-center justify-center">
+      <TrendingDown className="h-10 w-10 text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
@@ -192,267 +253,130 @@ const Compromissos = () => {
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Este Mês
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-expense">
-                {formatCurrency(summary.thisMonthAmount)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Próximo Mês
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {formatCurrency(summary.nextMonthAmount)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Restante
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-expense">
-                {formatCurrency(summary.totalRemainingAmount)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Compromissos Ativos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{summary.totalActive}</p>
-              <p className="text-xs text-muted-foreground">
-                {summary.installmentsCount} parcelamentos · {summary.loansCount} empréstimos
-              </p>
-            </CardContent>
-          </Card>
+          {[
+            { label: "Este Mês", value: formatCurrency(summary.thisMonthAmount) },
+            { label: "Próximo Mês", value: formatCurrency(summary.nextMonthAmount) },
+            { label: "Total Restante", value: formatCurrency(summary.totalRemainingAmount) },
+            { label: "Ativos", value: String(summary.totalActive), sub: `${summary.installmentsCount} parcelamentos · ${summary.loansCount} empréstimos` },
+          ].map((card) => (
+            <div key={card.label} className="rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-5">
+              <p className="text-xs text-muted-foreground font-medium mb-1">{card.label}</p>
+              <p className="text-2xl font-bold">{card.value}</p>
+              {card.sub && <p className="text-xs text-muted-foreground mt-0.5">{card.sub}</p>}
+            </div>
+          ))}
         </div>
 
-        <Tabs defaultValue="list" className="w-full">
-          <TabsList>
-            <TabsTrigger value="list">Lista</TabsTrigger>
-            <TabsTrigger value="projection">Projeção Mensal</TabsTrigger>
-          </TabsList>
+        {/* Main Tabs: Parcelamentos / Empréstimos / Projeção */}
+        <Tabs defaultValue="parcelamentos" className="w-full">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <TabsList className="bg-muted/50 rounded-xl">
+              <TabsTrigger value="parcelamentos" className="rounded-lg text-sm">
+                <CreditCard className="h-4 w-4 mr-1.5" />
+                Parcelamentos
+              </TabsTrigger>
+              <TabsTrigger value="emprestimos" className="rounded-lg text-sm">
+                <Landmark className="h-4 w-4 mr-1.5" />
+                Empréstimos
+              </TabsTrigger>
+              <TabsTrigger value="projection" className="rounded-lg text-sm">
+                Projeção
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="list" className="space-y-4 mt-4">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-4">
-              <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as CommitmentKind | "all")}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="installment">Parcelamentos</SelectItem>
-                  <SelectItem value="loan">Empréstimos</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "amount")}>
+              <SelectTrigger className="w-[180px] rounded-xl bg-card/60 border-none">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Próximo Vencimento</SelectItem>
+                <SelectItem value="amount">Maior Valor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "amount")}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Próximo Vencimento</SelectItem>
-                  <SelectItem value="amount">Maior Valor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Commitments List */}
-            {filteredCommitments.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <TrendingDown className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium">Nenhum compromisso ativo</p>
-                  <p className="text-muted-foreground text-sm">
-                    Você não possui parcelamentos ou empréstimos pendentes
-                  </p>
-                </CardContent>
-              </Card>
+          <TabsContent value="parcelamentos" className="mt-4 space-y-3">
+            {installmentCommitments.length === 0 ? (
+              <EmptyState message="Nenhum parcelamento ativo" />
             ) : (
-              <div className="space-y-3">
-                {filteredCommitments.map((commitment) => {
-                  const Icon = getKindIcon(commitment.kind);
-                  const progress = ((commitment.totalCount - commitment.remainingCount) / commitment.totalCount) * 100;
-
-                  return (
-                    <Card key={commitment.id} className="hover:bg-muted/50 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 rounded-lg bg-muted mt-1">
-                            <Icon className="h-5 w-5 text-muted-foreground" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <p className="font-medium truncate">{commitment.title}</p>
-                              <Badge variant="outline" className="text-xs">
-                                {getKindLabel(commitment.kind)}
-                              </Badge>
-                              {getUrgencyBadge(commitment)}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                              <span>{commitment.origin}</span>
-                              {commitment.categoryName && (
-                                <>
-                                  <span>·</span>
-                                  <span>{commitment.categoryName}</span>
-                                </>
-                              )}
-                              <span>·</span>
-                              <span>
-                                {commitment.totalCount - commitment.remainingCount}/{commitment.totalCount} parcelas
-                              </span>
-                            </div>
-                            {/* Progress bar */}
-                            <div className="mt-2 w-full bg-muted rounded-full h-1.5">
-                              <div 
-                                className="bg-primary h-1.5 rounded-full transition-all"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 mt-3 pt-3 border-t">
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                onClick={() => handlePay(commitment)}
-                              >
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                Pagar
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleDetails(commitment)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Detalhes
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <p className="font-medium">
-                              {formatCurrency(commitment.monthlyAmount)}
-                              <span className="text-xs text-muted-foreground">/mês</span>
-                            </p>
-                            {commitment.nextDueDate && (
-                              <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {format(commitment.nextDueDate, "dd/MM", { locale: ptBR })}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Restam {formatCurrency(commitment.remainingAmount)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+              sortCommitments(installmentCommitments).map((c) => (
+                <CommitmentCard key={c.id} commitment={c} />
+              ))
             )}
           </TabsContent>
 
-          <TabsContent value="projection" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Projeção dos Próximos 12 Meses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyProjections}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="monthLabel" 
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <Legend />
-                      <Bar 
-                        dataKey="installmentsAmount" 
-                        name="Parcelamentos" 
-                        fill="hsl(var(--primary))" 
-                        radius={[4, 4, 0, 0]}
-                        stackId="a"
-                      />
-                      <Bar 
-                        dataKey="loansAmount" 
-                        name="Empréstimos" 
-                        fill="hsl(var(--destructive))" 
-                        radius={[4, 4, 0, 0]}
-                        stackId="a"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="emprestimos" className="mt-4 space-y-3">
+            {loanCommitments.length === 0 ? (
+              <EmptyState message="Nenhum empréstimo ativo" />
+            ) : (
+              sortCommitments(loanCommitments).map((c) => (
+                <CommitmentCard key={c.id} commitment={c} />
+              ))
+            )}
+          </TabsContent>
 
-            {/* Monthly breakdown table */}
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-lg">Detalhamento por Mês</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 font-medium">Mês</th>
-                        <th className="text-right py-2 font-medium">Parcelamentos</th>
-                        <th className="text-right py-2 font-medium">Empréstimos</th>
-                        <th className="text-right py-2 font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthlyProjections.map((proj) => (
-                        <tr key={proj.month} className="border-b last:border-0">
-                          <td className="py-2">{proj.monthLabel}</td>
-                          <td className="py-2 text-right">{formatCurrency(proj.installmentsAmount)}</td>
-                          <td className="py-2 text-right">{formatCurrency(proj.loansAmount)}</td>
-                          <td className="py-2 text-right font-medium">{formatCurrency(proj.totalAmount)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="projection" className="mt-4 space-y-4">
+            <div className="rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-4">Projeção dos Próximos 12 Meses</h3>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyProjections}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="monthLabel" 
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="installmentsAmount" 
+                      name="Parcelamentos" 
+                      fill="hsl(var(--primary))" 
+                      radius={[6, 6, 0, 0]}
+                      stackId="a"
+                    />
+                    <Bar 
+                      dataKey="loansAmount" 
+                      name="Empréstimos" 
+                      fill="hsl(var(--muted-foreground))" 
+                      radius={[6, 6, 0, 0]}
+                      stackId="a"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Monthly breakdown */}
+            <div className="rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-4">Detalhamento por Mês</h3>
+              <div className="space-y-2">
+                {monthlyProjections.map((proj) => (
+                  <div key={proj.month} className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors">
+                    <span className="text-sm font-medium">{proj.monthLabel}</span>
+                    <div className="flex gap-6 text-sm">
+                      <span className="text-muted-foreground">{formatCurrency(proj.installmentsAmount)}</span>
+                      <span className="text-muted-foreground">{formatCurrency(proj.loansAmount)}</span>
+                      <span className="font-semibold">{formatCurrency(proj.totalAmount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 

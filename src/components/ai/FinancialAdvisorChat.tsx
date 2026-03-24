@@ -275,18 +275,24 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   return (
     <div className={`flex gap-2 items-start ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
-        <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
+        <div className="p-1.5 rounded-lg bg-primary/10 shrink-0 mt-1">
           <Bot className="h-4 w-4 text-primary" />
         </div>
       )}
       <div
-        className={`rounded-lg p-3 text-sm max-w-[85%] whitespace-pre-wrap ${
+        className={`max-w-[85%] px-4 py-3 text-sm ${
           isUser
-            ? "bg-primary text-primary-foreground ml-auto"
-            : "bg-muted"
+            ? "bg-primary text-primary-foreground ml-auto rounded-2xl rounded-tr-sm"
+            : "bg-muted/50 backdrop-blur-sm text-foreground rounded-2xl rounded-tl-sm"
         }`}
       >
-        {message.content}
+        {isUser ? (
+          <span className="whitespace-pre-wrap">{message.content}</span>
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>p:last-child]:mb-0">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );

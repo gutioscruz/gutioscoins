@@ -419,11 +419,16 @@ const Loans = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
                         {loan.name}
                         <Badge className={getStatusColor(loan.status)}>
                           {getStatusLabel(loan.status)}
                         </Badge>
+                        {loan.loanType === 'consignado_clt' && (
+                          <Badge className="bg-income/10 text-income border-none text-xs">
+                            Desconto Automático em Folha
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>{loan.description}</CardDescription>
                     </div>
