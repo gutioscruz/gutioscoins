@@ -93,6 +93,7 @@ const Loans = () => {
       startDate: new Date(startDate),
       status: "active" as LoanStatus,
       bankId: bankId || undefined,
+      loanType,
     });
     
     setIsAddDialogOpen(false);
