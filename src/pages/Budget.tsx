@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, AlertCircle, Calendar, Wallet, History, BarChart3 } from "lucide-react";
@@ -35,14 +34,12 @@ const Budget = () => {
     removeCategoryFromArea,
   } = useBudgetAreas();
 
-  // Initialize default areas on first access
   useEffect(() => {
     if (!isLoadingAreas && budgetAreas.length === 0 && !isInitializing) {
       initializeDefaultAreas();
     }
   }, [isLoadingAreas, budgetAreas.length, isInitializing, initializeDefaultAreas]);
 
-  // Calculate salary
   const calculatedSalary = useMemo(() => {
     return transactions
       .filter((t) => {
@@ -60,7 +57,6 @@ const Budget = () => {
     ? calculatedSalary
     : settings?.monthlySalary || 0;
 
-  // Budget allocation calculations
   const { allocations, totalPlanned, totalActual, totalVariance, isBalanced } = useBudgetAllocation({
     transactions,
     budgetAreas,
@@ -70,7 +66,6 @@ const Budget = () => {
     selectedYear,
   });
 
-  // Historical analysis (existing functionality)
   const expenseCategories = categories.filter(c => c.type === "expense");
 
   const historicalAnalysis = useMemo(() => {
@@ -79,9 +74,8 @@ const Budget = () => {
     expenseCategories.forEach(category => {
       const last3MonthsTransactions = transactions.filter(t => {
         const transDate = new Date(t.date);
-        const monthsAgo = 3;
         const thresholdDate = new Date();
-        thresholdDate.setMonth(thresholdDate.getMonth() - monthsAgo);
+        thresholdDate.setMonth(thresholdDate.getMonth() - 3);
         
         return t.type === "expense" && 
                t.categoryId === category.id && 
@@ -174,7 +168,7 @@ const Budget = () => {
           </div>
           <div className="flex gap-2">
             <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] rounded-xl">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -187,7 +181,7 @@ const Budget = () => {
               </SelectContent>
             </Select>
             <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[100px] rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -202,16 +196,16 @@ const Budget = () => {
         </div>
 
         <Tabs defaultValue="wallet" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="wallet" className="flex items-center gap-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 rounded-2xl bg-muted/50 p-1">
+            <TabsTrigger value="wallet" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Wallet className="h-4 w-4" />
               Minha Carteira
             </TabsTrigger>
-            <TabsTrigger value="comparison" className="flex items-center gap-2">
+            <TabsTrigger value="comparison" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <BarChart3 className="h-4 w-4" />
               Orçado x Realizado
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger value="history" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <History className="h-4 w-4" />
               Análise Histórica
             </TabsTrigger>
@@ -220,46 +214,34 @@ const Budget = () => {
           <TabsContent value="wallet" className="space-y-6">
             {/* Summary Cards */}
             <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Salário Base</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-income">{formatCurrency(effectiveSalary)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {settings?.salaryAutoCalculate !== false ? "Calculado automaticamente" : "Definido manualmente"}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Total Planejado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">{formatCurrency(totalPlanned)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {isBalanced ? "100% distribuído" : "Distribuição incompleta"}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Total Real</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    {totalVariance >= 0 ? (
-                      <TrendingUp className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <TrendingDown className="h-5 w-5 text-income" />
-                    )}
-                    <p className="text-2xl font-bold">{formatCurrency(totalActual)}</p>
-                  </div>
-                  <p className={`text-xs mt-1 ${totalVariance >= 0 ? 'text-destructive' : 'text-income'}`}>
-                    {totalVariance >= 0 ? '+' : ''}{formatCurrency(totalVariance)} do planejado
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground mb-2">Salário Base</p>
+                <p className="text-2xl font-bold text-income tabular-nums">{formatCurrency(effectiveSalary)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {settings?.salaryAutoCalculate !== false ? "Calculado automaticamente" : "Definido manualmente"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground mb-2">Total Planejado</p>
+                <p className="text-2xl font-bold tabular-nums">{formatCurrency(totalPlanned)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isBalanced ? "100% distribuído" : "Distribuição incompleta"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Total Real</p>
+                  {totalVariance >= 0 ? (
+                    <TrendingUp className="h-3.5 w-3.5 text-destructive" />
+                  ) : (
+                    <TrendingDown className="h-3.5 w-3.5 text-income" />
+                  )}
+                </div>
+                <p className="text-2xl font-bold tabular-nums">{formatCurrency(totalActual)}</p>
+                <p className={`text-xs mt-1 ${totalVariance >= 0 ? 'text-destructive' : 'text-income'}`}>
+                  {totalVariance >= 0 ? '+' : ''}{formatCurrency(totalVariance)} do planejado
+                </p>
+              </div>
             </div>
 
             {/* Main Content */}
@@ -306,57 +288,45 @@ const Budget = () => {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Orçamento Estimado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold">{formatCurrency(totalEstimated)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Média dos últimos 3 meses</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Gasto Atual</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold text-expense">{formatCurrency(totalCurrent)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {months[selectedMonth]} {selectedYear}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Variação</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    {totalVarianceHistorical >= 0 ? (
-                      <TrendingUp className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <TrendingDown className="h-5 w-5 text-income" />
-                    )}
-                    <p className={`text-3xl font-bold ${totalVarianceHistorical >= 0 ? 'text-destructive' : 'text-income'}`}>
-                      {formatCurrency(Math.abs(totalVarianceHistorical))}
-                    </p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {totalVariancePercentage > 0 ? '+' : ''}{totalVariancePercentage.toFixed(1)}% do orçamento
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground mb-2">Orçamento Estimado</p>
+                <p className="text-2xl font-bold tabular-nums">{formatCurrency(totalEstimated)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Média dos últimos 3 meses</p>
+              </div>
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground mb-2">Gasto Atual</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(totalCurrent)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {months[selectedMonth]} {selectedYear}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Variação</p>
+                  {totalVarianceHistorical >= 0 ? (
+                    <TrendingUp className="h-3.5 w-3.5 text-destructive" />
+                  ) : (
+                    <TrendingDown className="h-3.5 w-3.5 text-income" />
+                  )}
+                </div>
+                <p className={`text-2xl font-bold tabular-nums ${totalVarianceHistorical >= 0 ? 'text-destructive' : 'text-income'}`}>
+                  {formatCurrency(Math.abs(totalVarianceHistorical))}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {totalVariancePercentage > 0 ? '+' : ''}{totalVariancePercentage.toFixed(1)}% do orçamento
+                </p>
+              </div>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Projeção por Categoria</CardTitle>
-                <CardDescription>
+            <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-5 transition-all duration-300">
+              <div>
+                <h3 className="text-base font-semibold">Projeção por Categoria</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Compare seus gastos atuais com a média histórica
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6">
                 {budgetProjection.map((item) => {
                   const progressValue = item.estimated > 0 
                     ? Math.min((item.current / item.estimated) * 100, 100) 
@@ -367,9 +337,9 @@ const Budget = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{item.category.name}</h4>
+                            <h4 className="font-medium text-sm">{item.category.name}</h4>
                             {item.isOverBudget && (
-                              <AlertCircle className="h-4 w-4 text-destructive" />
+                              <AlertCircle className="h-3.5 w-3.5 text-destructive" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
@@ -377,15 +347,15 @@ const Budget = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold">{formatCurrency(item.current)}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-semibold text-sm tabular-nums">{formatCurrency(item.current)}</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">
                             de {formatCurrency(item.estimated)}
                           </p>
                         </div>
                       </div>
                       <Progress 
                         value={progressValue} 
-                        className={item.isOverBudget ? "[&>div]:bg-destructive" : ""} 
+                        className={`h-1.5 ${item.isOverBudget ? "[&>div]:bg-destructive" : ""}`} 
                       />
                       <div className="flex items-center justify-between text-xs">
                         <span className={item.variance >= 0 ? "text-destructive" : "text-income"}>
@@ -396,31 +366,21 @@ const Budget = () => {
                     </div>
                   );
                 })}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  Como funciona o Orçamento?
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  • O orçamento é calculado automaticamente com base na <strong>média dos seus gastos dos últimos 3 meses</strong>.
-                </p>
-                <p>
-                  • Cada categoria mostra quanto você gastou em média e compara com o gasto atual do mês.
-                </p>
-                <p>
-                  • Categorias marcadas com <AlertCircle className="h-3 w-3 inline text-destructive" /> estão acima da média histórica.
-                </p>
-                <p>
-                  • Use esta ferramenta para identificar onde você pode economizar e planejar melhor seus gastos futuros.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-3xl bg-accent/30 backdrop-blur-md border-none shadow-sm p-6 space-y-3 transition-all duration-300">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Como funciona o Orçamento?</h3>
+              </div>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>• O orçamento é calculado automaticamente com base na <strong className="text-foreground">média dos seus gastos dos últimos 3 meses</strong>.</p>
+                <p>• Cada categoria mostra quanto você gastou em média e compara com o gasto atual do mês.</p>
+                <p>• Categorias marcadas com <AlertCircle className="h-3 w-3 inline text-destructive" /> estão acima da média histórica.</p>
+                <p>• Use esta ferramenta para identificar onde você pode economizar e planejar melhor seus gastos futuros.</p>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 
