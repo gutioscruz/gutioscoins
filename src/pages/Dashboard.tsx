@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFinance } from "@/contexts/FinanceContext";
 import { 
   TrendingUp, 
@@ -31,12 +30,10 @@ const Dashboard = () => {
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-    // Transações do mês atual
     const currentMonthTransactions = transactions.filter((t) =>
       isWithinInterval(new Date(t.date), { start: currentMonthStart, end: currentMonthEnd })
     );
 
-    // Transações do mês passado
     const lastMonthTransactions = transactions.filter((t) =>
       isWithinInterval(new Date(t.date), { start: lastMonthStart, end: lastMonthEnd })
     );
@@ -60,7 +57,6 @@ const Dashboard = () => {
     const incomeChange = lastIncome > 0 ? ((currentIncome - lastIncome) / lastIncome) * 100 : 0;
     const expenseChange = lastExpense > 0 ? ((currentExpense - lastExpense) / lastExpense) * 100 : 0;
 
-    // Categoria com mais gastos
     const expensesByCategory: Record<string, number> = {};
     currentMonthTransactions
       .filter((t) => t.type === "expense")
@@ -73,14 +69,12 @@ const Dashboard = () => {
       ? categories.find((c) => c.id === topCategory[0])?.name
       : null;
 
-    // Análise de gastos incomuns
     const avgLastMonthExpense = lastExpense / 30;
     const unusualExpenses = currentMonthTransactions
       .filter((t) => t.type === "expense" && t.amount > avgLastMonthExpense * 2)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 3);
 
-    // Previsão de saldo
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const daysPassed = now.getDate();
     const avgDailyExpense = currentExpense / daysPassed;
@@ -123,34 +117,35 @@ const Dashboard = () => {
 
         {/* Alertas */}
         {unreadAlerts.length > 0 && (
-          <Card className="border-primary/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">
-                    Notificações ({unreadAlerts.length})
-                  </CardTitle>
+          <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-primary/10">
+                  <Bell className="h-4 w-4 text-primary" />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllAlerts}
-                >
-                  Limpar Todas
-                </Button>
+                <h3 className="text-base font-semibold">
+                  Notificações ({unreadAlerts.length})
+                </h3>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:bg-accent/50 rounded-xl"
+                onClick={clearAllAlerts}
+              >
+                Limpar Todas
+              </Button>
+            </div>
+            <div className="space-y-3">
               {unreadAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className={`p-3 rounded-lg border flex items-start justify-between ${
+                  className={`p-4 rounded-2xl flex items-start justify-between transition-all duration-300 ${
                     alert.type === "success"
-                      ? "bg-income/10 border-income/20"
+                      ? "bg-income/5"
                       : alert.type === "warning"
-                      ? "bg-expense/10 border-expense/20"
-                      : "bg-primary/10 border-primary/20"
+                      ? "bg-destructive/5"
+                      : "bg-primary/5"
                   }`}
                 >
                   <div className="flex-1">
@@ -158,7 +153,7 @@ const Dashboard = () => {
                       {alert.type === "success" ? (
                         <CheckCircle2 className="h-4 w-4 text-income" />
                       ) : alert.type === "warning" ? (
-                        <AlertCircle className="h-4 w-4 text-expense" />
+                        <AlertCircle className="h-4 w-4 text-destructive" />
                       ) : (
                         <AlertCircle className="h-4 w-4 text-primary" />
                       )}
@@ -172,100 +167,88 @@ const Dashboard = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className="h-7 w-7 p-0 rounded-full hover:bg-accent/50"
                     onClick={() => markAlertAsRead(alert.id)}
                   >
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Resumo Mensal */}
-        <div className="grid gap-6 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+            <div className="flex items-start justify-between mb-3">
+              <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Receitas (mês)</p>
+              <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-income/10">
                 <DollarSign className="h-4 w-4 text-income" />
-                Receitas (mês)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-income">
-                {formatCurrency(insights.currentIncome)}
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                {insights.incomeChange >= 0 ? (
-                  <ArrowUpRight className="h-4 w-4 text-income" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-expense" />
-                )}
-                <span className={`text-xs ${insights.incomeChange >= 0 ? "text-income" : "text-expense"}`}>
-                  {Math.abs(insights.incomeChange).toFixed(1)}% vs mês anterior
-                </span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <p className="text-2xl font-bold text-income tabular-nums">
+              {formatCurrency(insights.currentIncome)}
+            </p>
+            <div className="flex items-center gap-1 mt-2">
+              {insights.incomeChange >= 0 ? (
+                <ArrowUpRight className="h-3.5 w-3.5 text-income" />
+              ) : (
+                <ArrowDownRight className="h-3.5 w-3.5 text-destructive" />
+              )}
+              <span className={`text-xs ${insights.incomeChange >= 0 ? "text-income" : "text-destructive"}`}>
+                {Math.abs(insights.incomeChange).toFixed(1)}% vs mês anterior
+              </span>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-expense" />
-                Despesas (mês)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-expense">
-                {formatCurrency(insights.currentExpense)}
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                {insights.expenseChange >= 0 ? (
-                  <ArrowUpRight className="h-4 w-4 text-expense" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-income" />
-                )}
-                <span className={`text-xs ${insights.expenseChange >= 0 ? "text-expense" : "text-income"}`}>
-                  {Math.abs(insights.expenseChange).toFixed(1)}% vs mês anterior
-                </span>
+          <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+            <div className="flex items-start justify-between mb-3">
+              <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Despesas (mês)</p>
+              <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-muted/50">
+                <TrendingDown className="h-4 w-4 text-muted-foreground" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <p className="text-2xl font-bold text-foreground tabular-nums">
+              {formatCurrency(insights.currentExpense)}
+            </p>
+            <div className="flex items-center gap-1 mt-2">
+              {insights.expenseChange >= 0 ? (
+                <ArrowUpRight className="h-3.5 w-3.5 text-foreground" />
+              ) : (
+                <ArrowDownRight className="h-3.5 w-3.5 text-income" />
+              )}
+              <span className={`text-xs ${insights.expenseChange >= 0 ? "text-foreground" : "text-income"}`}>
+                {Math.abs(insights.expenseChange).toFixed(1)}% vs mês anterior
+              </span>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Saldo Atual
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className={`text-2xl font-bold ${insights.currentBalance >= 0 ? "text-income" : "text-expense"}`}>
-                {formatCurrency(insights.currentBalance)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Este mês
-              </p>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+            <div className="flex items-start justify-between mb-3">
+              <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Saldo Atual</p>
+              <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-primary/10">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <p className={`text-2xl font-bold tabular-nums ${insights.currentBalance >= 0 ? "text-income" : "text-destructive"}`}>
+              {formatCurrency(insights.currentBalance)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">Este mês</p>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Projeção
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className={`text-2xl font-bold ${insights.projectedBalance >= 0 ? "text-income" : "text-expense"}`}>
-                {formatCurrency(insights.projectedBalance)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Fim do mês
-              </p>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl bg-card/40 backdrop-blur-md border-none shadow-sm p-5 transition-all duration-300 hover:shadow-md">
+            <div className="flex items-start justify-between mb-3">
+              <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">Projeção</p>
+              <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-accent/50">
+                <Calendar className="h-4 w-4 text-accent-foreground" />
+              </div>
+            </div>
+            <p className={`text-2xl font-bold tabular-nums ${insights.projectedBalance >= 0 ? "text-income" : "text-destructive"}`}>
+              {formatCurrency(insights.projectedBalance)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">Fim do mês</p>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -273,36 +256,36 @@ const Dashboard = () => {
           <CardSummaryWidget />
 
           {/* Insights */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Insights Inteligentes</CardTitle>
-              <CardDescription>Análise automática dos seus gastos</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-5 transition-all duration-300">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Insights Inteligentes</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Análise automática dos seus gastos</p>
+            </div>
+            <div className="space-y-4">
               {insights.topCategoryName && (
-                <div className="p-4 rounded-lg bg-muted/50">
+                <div className="p-4 rounded-2xl bg-accent/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="h-5 w-5 text-primary" />
-                    <p className="font-semibold">Categoria com mais gastos</p>
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                    <p className="font-semibold text-sm">Categoria com mais gastos</p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Você gastou <span className="font-bold text-expense">{formatCurrency(insights.topCategoryAmount)}</span> em{" "}
+                    Você gastou <span className="font-bold text-foreground">{formatCurrency(insights.topCategoryAmount)}</span> em{" "}
                     <span className="font-bold">{insights.topCategoryName}</span> este mês.
                   </p>
                 </div>
               )}
 
               {insights.unusualExpenses.length > 0 && (
-                <div className="p-4 rounded-lg bg-muted/50">
+                <div className="p-4 rounded-2xl bg-accent/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5 text-expense" />
-                    <p className="font-semibold">Gastos Incomuns</p>
+                    <TrendingUp className="h-4 w-4 text-foreground" />
+                    <p className="font-semibold text-sm">Gastos Incomuns</p>
                   </div>
                   <div className="space-y-2">
                     {insights.unusualExpenses.map((t) => (
                       <div key={t.id} className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t.description}</span>
-                        <span className="font-bold text-expense">{formatCurrency(t.amount)}</span>
+                        <span className="font-bold text-foreground tabular-nums">{formatCurrency(t.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -310,29 +293,29 @@ const Dashboard = () => {
               )}
 
               {insights.projectedMonthExpense > 0 && (
-                <div className="p-4 rounded-lg bg-muted/50">
+                <div className="p-4 rounded-2xl bg-accent/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    <p className="font-semibold">Previsão de Gastos</p>
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <p className="font-semibold text-sm">Previsão de Gastos</p>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Com base no seu ritmo atual, você deve gastar cerca de{" "}
-                    <span className="font-bold text-expense">{formatCurrency(insights.projectedMonthExpense)}</span> até o fim do mês.
+                    <span className="font-bold text-foreground">{formatCurrency(insights.projectedMonthExpense)}</span> até o fim do mês.
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Metas Ativas */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Metas em Andamento</CardTitle>
-                <Target className="h-5 w-5 text-muted-foreground" />
+          <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-5 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-foreground">Metas em Andamento</h3>
+              <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-primary/10">
+                <Target className="h-4 w-4 text-primary" />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="space-y-4">
               {activeGoals.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Nenhuma meta ativa. Crie uma meta para começar!
@@ -344,10 +327,10 @@ const Dashboard = () => {
                     <div key={goal.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm">{goal.name}</p>
-                        <Badge variant="secondary">{progress.toFixed(0)}%</Badge>
+                        <Badge variant="secondary" className="rounded-full text-xs">{progress.toFixed(0)}%</Badge>
                       </div>
-                      <Progress value={progress} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <Progress value={progress} className="h-1.5" />
+                      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
                         <span>{formatCurrency(goal.currentAmount)}</span>
                         <span>{formatCurrency(goal.targetAmount)}</span>
                       </div>
@@ -355,8 +338,8 @@ const Dashboard = () => {
                   );
                 })
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
     </div>

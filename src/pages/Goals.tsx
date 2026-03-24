@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Target, TrendingUp, Calendar as CalendarIcon, CheckCircle2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +43,8 @@ const Goals = () => {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [progressAmount, setProgressAmount] = useState("");
   const [activeTab, setActiveTab] = useState("goals");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedGoalToDelete, setSelectedGoalToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -84,11 +85,6 @@ const Goals = () => {
     resetDialog();
   };
 
-  const handleDelete = (id: string) => {
-    setSelectedGoal(id);
-    setDeleteDialogOpen(true);
-  };
-
   const confirmDelete = () => {
     if (selectedGoalToDelete) {
       deleteGoal(selectedGoalToDelete);
@@ -97,9 +93,6 @@ const Goals = () => {
     setDeleteDialogOpen(false);
     setSelectedGoalToDelete(null);
   };
-
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedGoalToDelete, setSelectedGoalToDelete] = useState<string | null>(null);
 
   const handleUpdateProgress = () => {
     if (!selectedGoal || !progressAmount) {
@@ -179,12 +172,12 @@ const Goals = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="goals" className="gap-2">
+          <TabsList className="grid w-full max-w-md grid-cols-2 rounded-2xl bg-muted/50 p-1">
+            <TabsTrigger value="goals" className="gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Target className="h-4 w-4" />
               Metas Financeiras
             </TabsTrigger>
-            <TabsTrigger value="wishlist" className="gap-2">
+            <TabsTrigger value="wishlist" className="gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Heart className="h-4 w-4" />
               Lista de Desejos
             </TabsTrigger>
@@ -194,12 +187,12 @@ const Goals = () => {
             <div className="flex justify-end">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2" onClick={() => setEditingId(null)}>
+                  <Button className="gap-2 rounded-xl" onClick={() => setEditingId(null)}>
                     <Plus className="w-4 h-4" />
                     Nova Meta
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl border-none bg-card/80 backdrop-blur-xl">
                   <DialogHeader>
                     <DialogTitle>{editingId ? "Editar" : "Nova"} Meta Financeira</DialogTitle>
                     <DialogDescription>
@@ -214,6 +207,7 @@ const Goals = () => {
                         placeholder="Ex: Comprar um carro, Viagem..."
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="rounded-xl"
                       />
                     </div>
 
@@ -224,6 +218,7 @@ const Goals = () => {
                         placeholder="Descreva sua meta..."
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="rounded-xl"
                       />
                     </div>
 
@@ -234,7 +229,7 @@ const Goals = () => {
                           value={formData.type}
                           onValueChange={(value: GoalType) => setFormData({ ...formData, type: value })}
                         >
-                          <SelectTrigger id="type">
+                          <SelectTrigger id="type" className="rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -253,7 +248,7 @@ const Goals = () => {
                           value={formData.status}
                           onValueChange={(value: GoalStatus) => setFormData({ ...formData, status: value })}
                         >
-                          <SelectTrigger id="status">
+                          <SelectTrigger id="status" className="rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -275,6 +270,7 @@ const Goals = () => {
                           placeholder="0,00"
                           value={formData.targetAmount}
                           onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                          className="rounded-xl"
                         />
                       </div>
 
@@ -287,6 +283,7 @@ const Goals = () => {
                           placeholder="0,00"
                           value={formData.currentAmount}
                           onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+                          className="rounded-xl"
                         />
                       </div>
                     </div>
@@ -298,7 +295,7 @@ const Goals = () => {
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal rounded-xl",
                               !formData.deadline && "text-muted-foreground"
                             )}
                           >
@@ -327,7 +324,7 @@ const Goals = () => {
                           value={formData.categoryId}
                           onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
                         >
-                          <SelectTrigger id="category">
+                          <SelectTrigger id="category" className="rounded-xl">
                             <SelectValue placeholder="Selecione uma categoria" />
                           </SelectTrigger>
                           <SelectContent>
@@ -343,7 +340,7 @@ const Goals = () => {
                       </div>
                     )}
 
-                    <Button onClick={handleSave} className="w-full">
+                    <Button onClick={handleSave} className="w-full rounded-xl">
                       {editingId ? "Salvar Alterações" : "Criar Meta"}
                     </Button>
                   </div>
@@ -353,82 +350,82 @@ const Goals = () => {
 
             {activeGoals.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4">Metas Ativas</h2>
-                <div className="grid gap-6 md:grid-cols-2">
+                <h2 className="text-xl font-semibold mb-4">Metas Ativas</h2>
+                <div className="grid gap-5 md:grid-cols-2">
                   {activeGoals.map((goal) => {
                     const progress = (goal.currentAmount / goal.targetAmount) * 100;
                     const daysLeft = differenceInDays(goal.deadline, new Date());
                     const isOverdue = daysLeft < 0;
 
                     return (
-                      <Card key={goal.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <CardTitle className="text-lg">{goal.name}</CardTitle>
-                                <Badge>{goalTypeLabels[goal.type]}</Badge>
-                              </div>
-                              {goal.description && (
-                                <CardDescription className="mt-1">{goal.description}</CardDescription>
-                              )}
+                      <div key={goal.id} className="group rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 space-y-4 transition-all duration-300 hover:shadow-md">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base font-semibold">{goal.name}</h3>
+                              <Badge className="rounded-full text-xs bg-primary/10 text-primary border-none">
+                                {goalTypeLabels[goal.type]}
+                              </Badge>
                             </div>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openProgressDialog(goal.id)}
-                              >
-                                <TrendingUp className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(goal.id)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() => {
-                                  setSelectedGoalToDelete(goal.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            {goal.description && (
+                              <p className="text-xs text-muted-foreground">{goal.description}</p>
+                            )}
                           </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <div className="flex justify-between items-end mb-2">
-                              <div>
-                                <p className="text-2xl font-bold text-primary">
-                                  {formatCurrency(goal.currentAmount)}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  de {formatCurrency(goal.targetAmount)}
-                                </p>
-                              </div>
-                              <p className="text-3xl font-bold">{progress.toFixed(0)}%</p>
-                            </div>
-                            <Progress value={progress} className="h-3" />
+                          <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full hover:bg-accent/50"
+                              onClick={() => openProgressDialog(goal.id)}
+                            >
+                              <TrendingUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-accent/50" onClick={() => openEditDialog(goal.id)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full hover:bg-destructive/10 text-destructive"
+                              onClick={() => {
+                                setSelectedGoalToDelete(goal.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
+                        </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t">
-                            <div className="flex items-center gap-2 text-sm">
-                              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                              <span className={isOverdue ? "text-destructive" : "text-muted-foreground"}>
-                                {isOverdue
-                                  ? `${Math.abs(daysLeft)} dias atrasado`
-                                  : `${daysLeft} dias restantes`}
-                              </span>
+                        <div>
+                          <div className="flex justify-between items-end mb-2">
+                            <div>
+                              <p className="text-2xl font-bold text-primary tabular-nums">
+                                {formatCurrency(goal.currentAmount)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                de {formatCurrency(goal.targetAmount)}
+                              </p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {format(goal.deadline, "dd/MM/yyyy")}
-                            </p>
+                            <p className="text-2xl font-bold tabular-nums">{progress.toFixed(0)}%</p>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <Progress value={progress} className="h-1.5" />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-2 text-xs">
+                            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className={isOverdue ? "text-destructive" : "text-muted-foreground"}>
+                              {isOverdue
+                                ? `${Math.abs(daysLeft)} dias atrasado`
+                                : `${daysLeft} dias restantes`}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            {format(goal.deadline, "dd/MM/yyyy")}
+                          </p>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -437,65 +434,59 @@ const Goals = () => {
 
             {completedGoals.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4">Metas Concluídas</h2>
-                <div className="grid gap-6 md:grid-cols-2">
+                <h2 className="text-xl font-semibold mb-4">Metas Concluídas</h2>
+                <div className="grid gap-5 md:grid-cols-2">
                   {completedGoals.map((goal) => (
-                    <Card key={goal.id} className="bg-muted/50">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-5 w-5 text-income" />
-                              <CardTitle className="text-lg">{goal.name}</CardTitle>
-                              <Badge variant="secondary">{goalTypeLabels[goal.type]}</Badge>
-                            </div>
-                            {goal.description && (
-                              <CardDescription className="mt-1">{goal.description}</CardDescription>
-                            )}
+                    <div key={goal.id} className="group rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm p-6 transition-all duration-300">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-income" />
+                            <h3 className="text-base font-semibold">{goal.name}</h3>
+                            <Badge variant="secondary" className="rounded-full text-xs">{goalTypeLabels[goal.type]}</Badge>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              setSelectedGoalToDelete(goal.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {goal.description && (
+                            <p className="text-xs text-muted-foreground">{goal.description}</p>
+                          )}
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <p className="text-2xl font-bold text-income">
-                            {formatCurrency(goal.currentAmount)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Meta atingida em {format(goal.deadline, "dd/MM/yyyy")}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-full hover:bg-destructive/10 text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setSelectedGoalToDelete(goal.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="mt-4 space-y-1">
+                        <p className="text-2xl font-bold text-income tabular-nums">
+                          {formatCurrency(goal.currentAmount)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Meta atingida em {format(goal.deadline, "dd/MM/yyyy")}
+                        </p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
 
             {goals.length === 0 && (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">Nenhuma meta criada</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Defina metas financeiras para alcançar seus objetivos
-                  </p>
-                  <Button onClick={() => setDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Criar Primeira Meta
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="rounded-3xl bg-card/40 backdrop-blur-md border-none shadow-sm py-12 text-center">
+                <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium mb-2">Nenhuma meta criada</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Defina metas financeiras para alcançar seus objetivos
+                </p>
+                <Button onClick={() => setDialogOpen(true)} className="rounded-xl">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Primeira Meta
+                </Button>
+              </div>
             )}
           </TabsContent>
 
@@ -505,7 +496,7 @@ const Goals = () => {
         </Tabs>
 
         <Dialog open={progressDialogOpen} onOpenChange={setProgressDialogOpen}>
-          <DialogContent>
+          <DialogContent className="rounded-3xl border-none bg-card/80 backdrop-blur-xl">
             <DialogHeader>
               <DialogTitle>Atualizar Progresso</DialogTitle>
               <DialogDescription>Atualize o valor atual da sua meta</DialogDescription>
@@ -520,9 +511,10 @@ const Goals = () => {
                   placeholder="0,00"
                   value={progressAmount}
                   onChange={(e) => setProgressAmount(e.target.value)}
+                  className="rounded-xl"
                 />
               </div>
-              <Button onClick={handleUpdateProgress} className="w-full">
+              <Button onClick={handleUpdateProgress} className="w-full rounded-xl">
                 Atualizar
               </Button>
             </div>
