@@ -288,6 +288,7 @@ const Loans = () => {
                       <SelectContent>
                         <SelectItem value="pessoal">Pessoal</SelectItem>
                         <SelectItem value="consignado">Consignado</SelectItem>
+                        <SelectItem value="consignado_clt">Consignado CLT</SelectItem>
                         <SelectItem value="fatura_parcelada">Fatura Parcelada</SelectItem>
                       </SelectContent>
                     </Select>
