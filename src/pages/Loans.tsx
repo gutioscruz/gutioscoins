@@ -15,10 +15,11 @@ import { PaymentFrequency, LoanStatus } from "@/types/finance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type LoanType = 'consignado' | 'fatura_parcelada' | 'pessoal';
+type LoanType = 'consignado' | 'consignado_clt' | 'fatura_parcelada' | 'pessoal';
 
 const loanTypeLabels: Record<LoanType, string> = {
   consignado: 'Consignado',
+  consignado_clt: 'Consignado CLT',
   fatura_parcelada: 'Fatura Parcelada',
   pessoal: 'Pessoal',
 };
