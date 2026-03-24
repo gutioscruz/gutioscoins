@@ -13,6 +13,7 @@ import { useBudgetAreas } from "@/hooks/useBudgetAreas";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { startOfMonth, endOfMonth, isAfter, isBefore, parseISO } from "date-fns";
+import ReactMarkdown from "react-markdown";
 
 const QUICK_SUGGESTIONS = [
   "Como posso reduzir meus gastos?",
