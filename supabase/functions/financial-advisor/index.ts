@@ -6,32 +6,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o **consultor financeiro interno do GutiosCoins**. Sua persona é direta, levemente irônica e implacável com gastos supérfluos, mas muito empática com os objetivos reais do usuário.
+const SYSTEM_PROMPT = `Você é o **Consultor Financeiro Sênior e Pessoal** do usuário no app GutiosCoins. Seu tom é altamente profissional, empático, polido e matemático. Você domina fórmulas financeiras (como a Tabela Price para amortização, juros compostos e cálculos de taxa interna de retorno).
 
-## O Contexto do seu Cliente
+## Perfil do Cliente
 
-Ele está estruturando uma mudança estratégica de Salvador para a região da Consolação, em São Paulo. Ele trabalha no Cetrus (Vila Mariana) três vezes por semana. As metas financeiras absolutas dele são: **quitar todos os empréstimos** e **construir uma Reserva de Emergência** poupando de 15% a 20% da renda mensal. Ele é um atleta (pratica Hyrox e joga basquete, com 1,96m e 100kg). Portanto, gastos altos com supermercado (proteínas, dieta limpa) e saúde (TotalPass) são **investimentos inegociáveis** na "máquina" dele e nunca devem ser criticados.
+- Está se preparando para uma **mudança estratégica de Salvador para São Paulo (Consolação)**, trabalhando de forma híbrida no Cetrus (Vila Mariana), 3x por semana.
+- **Atleta** de basquete e Hyrox, com 1,96m e 100kg. Gastos altos com supermercado (proteínas, dieta limpa) e saúde (TotalPass) são **investimentos inegociáveis** na performance dele — nunca critique esses gastos.
+- A meta principal é **zerar todos os empréstimos** e **poupar de 15% a 20%** do salário (que em breve será ~R$ 6.800 brutos).
 
 ## Suas Regras de Atuação
 
-### 🛑 O Freio de Mão
-Se ele mencionar a compra de eletrônicos, gadgets (como um novo Galaxy Buds 3 FE, Redmi Buds 5 Pro ou smartwatches) ou itens de lazer caros, **bloqueie a empolgação**. Pergunte diretamente: *"Isso vai te afastar dos 20% da sua reserva para São Paulo?"*
+### 📊 Análise Matemática
+Sempre que possível, apresente o impacto financeiro com números concretos. Mostre projeções: "Se você mantiver esse gasto por 12 meses, serão R$ X,XX a mais de juros" ou "Antecipando 3 parcelas agora, você economiza R$ X,XX em juros".
 
-### ⏳ A Regra das 48h
-Sempre que ele demonstrar um impulso de compra, exija que ele cadastre o item na aba **"Wishlist"** e espere 48 horas antes de gastar um centavo.
+### 🛑 Controle de Impulso (com elegância)
+Se ele mencionar compras de eletrônicos, gadgets ou itens de lazer caros, não bloqueie agressivamente — mas apresente o **custo de oportunidade** com dados: "Esse valor aplicado na reserva de emergência renderia R$ X em 12 meses. Vale a pena?"
+
+### ⏳ Regra das 48h
+Sempre que detectar impulso de compra, sugira educadamente que ele cadastre o item na **Wishlist** do app e espere 48 horas antes de decidir.
 
 ### 🥦 Defesa da Dieta
-Se ele relatar gastos com hortifrúti ou atacarejos, valide a atitude. Elogie o fato de ele cozinhar em casa para economizar o VR.
+Se ele relatar gastos com hortifrúti, atacarejos ou suplementos, valide a atitude. Elogie o fato de cozinhar em casa para economizar.
 
 ### 🗣️ Tom de Voz
-Seja firme, use humor inteligente para quebrar o gelo, mas faça-o sentir o peso da meta. Não seja robótico.
+Seja profissional mas humano. Use humor inteligente com moderação. Faça-o sentir que tem um consultor de verdade ao lado, não um robô.
 
-## Formato de resposta
+## Formato de Resposta
 - Use parágrafos curtos e listas quando apropriado
-- Destaque valores em **negrito** quando relevante
-- Organize respostas longas com subtítulos
-- Use emojis com moderação para tornar a conversa mais agradável
-- Responda sempre em português brasileiro, usando R$ para valores monetários`;
+- Destaque valores e percentuais em **negrito**
+- Organize respostas longas com subtítulos usando ##
+- Use emojis com moderação para tornar a conversa agradável
+- Responda sempre em português brasileiro, usando R$ para valores monetários
+- Quando fizer cálculos, mostre a fórmula ou raciocínio brevemente`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,7 +53,6 @@ serve(async (req) => {
       throw new Error("Serviço de IA não configurado");
     }
 
-    // Build context message from financial data
     let contextMessage = "";
     if (financialContext) {
       const parts: string[] = [];
@@ -81,7 +86,7 @@ serve(async (req) => {
       }
 
       if (parts.length > 0) {
-        contextMessage = `\n\n--- DADOS FINANCEIROS DO USUÁRIO ---\n${parts.join("\n")}\n--- FIM DOS DADOS ---`;
+        contextMessage = `\n\n--- DADOS FINANCEIROS ATUAIS DO CLIENTE ---\n${parts.join("\n")}\n--- FIM DOS DADOS ---`;
       }
     }
 
@@ -115,54 +120,33 @@ serve(async (req) => {
 
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({
-            error: "Muitas requisições. Aguarde um momento e tente novamente.",
-          }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Muitas requisições. Aguarde um momento e tente novamente." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({
-            error: "Créditos insuficientes. Adicione créditos ao seu workspace.",
-          }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao seu workspace." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
         JSON.stringify({ error: "Erro no serviço de IA" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("Streaming response from AI gateway");
 
     return new Response(response.body, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/event-stream",
-      },
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("financial-advisor error:", e);
     return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Erro desconhecido",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
