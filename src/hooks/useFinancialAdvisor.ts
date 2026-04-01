@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -21,15 +23,54 @@ interface FinancialContext {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-advisor`;
 
+async function persistMessage(userId: string, role: string, content: string) {
+  await supabase.from("advisor_chat_history" as any).insert({
+    user_id: userId,
+    role,
+    content,
+  } as any);
+}
+
 export function useFinancialAdvisor() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const { user } = useAuth();
+
+  // Load history on mount
+  useEffect(() => {
+    if (!user?.id) {
+      setIsLoadingHistory(false);
+      return;
+    }
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("advisor_chat_history" as any)
+          .select("role, content")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(100) as any;
+
+        if (data && data.length > 0) {
+          setMessages(data.map((d: any) => ({ role: d.role, content: d.content })));
+        }
+      } catch (e) {
+        console.error("Failed to load chat history:", e);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    })();
+  }, [user?.id]);
 
   const sendMessage = useCallback(
     async (input: string, financialContext?: FinancialContext) => {
       const userMsg: ChatMessage = { role: "user", content: input };
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
+
+      // Persist user message
+      if (user?.id) persistMessage(user.id, "user", input);
 
       let assistantSoFar = "";
 
@@ -39,9 +80,7 @@ export function useFinancialAdvisor() {
           const last = prev[prev.length - 1];
           if (last?.role === "assistant") {
             return prev.map((m, i) =>
-              i === prev.length - 1
-                ? { ...m, content: assistantSoFar }
-                : m
+              i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
             );
           }
           return [...prev, { role: "assistant", content: assistantSoFar }];
@@ -56,10 +95,7 @@ export function useFinancialAdvisor() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({
-            messages: allMessages,
-            financialContext,
-          }),
+          body: JSON.stringify({ messages: allMessages, financialContext }),
         });
 
         if (!resp.ok) {
@@ -102,16 +138,11 @@ export function useFinancialAdvisor() {
             if (!line.startsWith("data: ")) continue;
 
             const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") {
-              streamDone = true;
-              break;
-            }
+            if (jsonStr === "[DONE]") { streamDone = true; break; }
 
             try {
               const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content as
-                | string
-                | undefined;
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
               if (content) upsertAssistant(content);
             } catch {
               textBuffer = line + "\n" + textBuffer;
@@ -131,14 +162,15 @@ export function useFinancialAdvisor() {
             if (jsonStr === "[DONE]") continue;
             try {
               const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content as
-                | string
-                | undefined;
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
               if (content) upsertAssistant(content);
-            } catch {
-              /* ignore */
-            }
+            } catch { /* ignore */ }
           }
+        }
+
+        // Persist assistant response
+        if (user?.id && assistantSoFar) {
+          persistMessage(user.id, "assistant", assistantSoFar);
         }
       } catch (e) {
         console.error("Financial advisor error:", e);
@@ -147,12 +179,18 @@ export function useFinancialAdvisor() {
         setIsLoading(false);
       }
     },
-    [messages]
+    [messages, user?.id]
   );
 
-  const clearMessages = useCallback(() => {
+  const clearMessages = useCallback(async () => {
     setMessages([]);
-  }, []);
+    if (user?.id) {
+      await supabase
+        .from("advisor_chat_history" as any)
+        .delete()
+        .eq("user_id", user.id);
+    }
+  }, [user?.id]);
 
-  return { messages, isLoading, sendMessage, clearMessages };
+  return { messages, isLoading, isLoadingHistory, sendMessage, clearMessages };
 }
