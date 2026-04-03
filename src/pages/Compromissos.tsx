@@ -155,13 +155,26 @@ const Compromissos = () => {
   }
 
   const CommitmentCard = ({ commitment }: { commitment: Commitment }) => {
+    const [showAnticipation, setShowAnticipation] = useState(false);
     const Icon = commitment.kind === "installment" ? CreditCard : Landmark;
     const progress = ((commitment.totalCount - commitment.remainingCount) / commitment.totalCount) * 100;
     const isConsignado = commitment.kind === "loan" && 
       loans.find(l => l.id === commitment.originalId)?.loanType === "consignado_clt";
 
+    // Calculate interest savings for anticipation
+    const interestSavings = useMemo(() => {
+      if (commitment.kind === "loan") {
+        const loan = loans.find(l => l.id === commitment.originalId);
+        if (!loan) return 0;
+        const unpaidPayments = loan.payments?.filter(p => !p.paid) || [];
+        return unpaidPayments.reduce((sum, p) => sum + p.interest, 0);
+      }
+      // For installments, no interest to save typically
+      return 0;
+    }, [commitment, loans]);
+
     return (
-      <div className="group rounded-2xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-4 hover:shadow-md transition-all duration-300">
+      <div className="group rounded-3xl bg-card/60 backdrop-blur-sm border-none shadow-sm p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-start gap-4">
           <div className="p-2.5 rounded-xl bg-muted shrink-0 mt-0.5">
             <Icon className="h-5 w-5 text-muted-foreground" />
@@ -192,7 +205,16 @@ const Compromissos = () => {
               />
             </div>
 
-            <div className="flex gap-2 mt-3">
+            {/* Anticipation savings badge */}
+            {showAnticipation && interestSavings > 0 && (
+              <div className="mt-2 p-2.5 rounded-2xl bg-income/5 border-none">
+                <p className="text-xs text-income font-medium">
+                  🎯 Antecipando hoje, você economiza <span className="font-bold">{formatCurrency(interestSavings)}</span> em juros
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-3 flex-wrap">
               <Button 
                 variant="default" 
                 size="sm"
@@ -211,6 +233,17 @@ const Compromissos = () => {
                 <Eye className="h-3.5 w-3.5 mr-1" />
                 Detalhes
               </Button>
+              {commitment.kind === "loan" && interestSavings > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl h-8 text-xs border-none bg-primary/5 hover:bg-primary/10 text-primary"
+                  onClick={() => setShowAnticipation(!showAnticipation)}
+                >
+                  <TrendingDown className="h-3.5 w-3.5 mr-1" />
+                  Simular Antecipação
+                </Button>
+              )}
             </div>
           </div>
 
