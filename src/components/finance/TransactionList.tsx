@@ -1,12 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, ArrowUpDown, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Transaction, Category, Bank } from "@/types/finance";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BankFilterChips } from "./BankFilterChips";
 import { AnticipateTransactionDialog } from "./AnticipateTransactionDialog";
 import { formatCurrency } from "@/lib/utils";
+
+const HEALTH_CATEGORY_KEYWORDS = ["esporte", "saúde", "saude", "academia", "totalpass", "supermercado", "mercado", "alimentação", "alimentacao", "dieta", "nutrição", "nutricao"];
+
+function isHealthCategory(categoryName?: string): boolean {
+  if (!categoryName) return false;
+  const lower = categoryName.toLowerCase();
+  return HEALTH_CATEGORY_KEYWORDS.some((kw) => lower.includes(kw));
+}
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -206,6 +215,7 @@ const TransactionRow = ({ transaction, categories, banks, onEdit, onDelete }: Tr
   const bank = banks.find((b) => b.id === transaction.bankId);
 
   const isIncome = transaction.type === "income";
+  const showHealthBadge = isHealthCategory(category?.name);
 
   return (
     <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-accent/50 transition-colors group cursor-default">
@@ -220,9 +230,17 @@ const TransactionRow = ({ transaction, categories, banks, onEdit, onDelete }: Tr
 
       {/* Center: description + meta */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">
-          {transaction.description}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {transaction.description}
+          </p>
+          {showHealthBadge && (
+            <Badge className="bg-income/10 text-income border-none text-[10px] px-1.5 py-0 h-4 shrink-0 rounded-full">
+              <Zap className="h-2.5 w-2.5 mr-0.5" />
+              Investimento Pessoal
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground truncate mt-0.5">
           {category?.name}
           {transaction.subcategory && ` · ${transaction.subcategory}`}
