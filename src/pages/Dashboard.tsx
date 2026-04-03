@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { 
   TrendingUp, 
@@ -19,9 +19,14 @@ import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, subMonths, format, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CardSummaryWidget } from "@/components/finance/CardSummaryWidget";
+import { ReserveGauge } from "@/components/dashboard/ReserveGauge";
+import { SPSimulatorToggle } from "@/components/dashboard/SPSimulatorToggle";
+
+const SP_SIMULATED_INCOME = 6800;
 
 const Dashboard = () => {
   const { transactions, categories, goals, alerts, markAlertAsRead, clearAllAlerts } = useFinance();
+  const [spSimulator, setSpSimulator] = useState(false);
 
   const insights = useMemo(() => {
     const now = new Date();
@@ -38,9 +43,11 @@ const Dashboard = () => {
       isWithinInterval(new Date(t.date), { start: lastMonthStart, end: lastMonthEnd })
     );
 
-    const currentIncome = currentMonthTransactions
+    const realIncome = currentMonthTransactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
+
+    const currentIncome = spSimulator ? SP_SIMULATED_INCOME : realIncome;
 
     const currentExpense = currentMonthTransactions
       .filter((t) => t.type === "expense")
@@ -93,7 +100,7 @@ const Dashboard = () => {
       projectedBalance,
       projectedMonthExpense,
     };
-  }, [transactions, categories]);
+  }, [transactions, categories, spSimulator]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -108,12 +115,21 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Visão geral das suas finanças e insights inteligentes
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Visão geral das suas finanças e insights inteligentes
+            </p>
+          </div>
+          <SPSimulatorToggle enabled={spSimulator} onToggle={setSpSimulator} />
         </div>
+
+        {spSimulator && (
+          <div className="rounded-2xl bg-purple-500/5 border-none px-4 py-3 text-sm text-purple-600 dark:text-purple-400 flex items-center gap-2">
+            🏙️ Simulando com renda bruta de <span className="font-semibold">R$ 6.800</span> (cenário SP — Consolação)
+          </div>
+        )}
 
         {/* Alertas */}
         {unreadAlerts.length > 0 && (
@@ -250,6 +266,14 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground mt-2">Fim do mês</p>
           </div>
         </div>
+
+        {/* Reserve Gauge */}
+        <ReserveGauge
+          currentIncome={insights.currentIncome}
+          currentExpense={insights.currentExpense}
+          targetPercentage={20}
+          simulatedIncome={spSimulator ? SP_SIMULATED_INCOME : null}
+        />
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Card Summary Widget */}
