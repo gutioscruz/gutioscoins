@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { Send, Trash2, Sparkles, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { startOfMonth, endOfMonth, isAfter, isBefore, parseISO } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const QUICK_SUGGESTIONS = [
   "Analise meu orçamento",
@@ -22,22 +23,23 @@ const QUICK_SUGGESTIONS = [
   "Projeção para SP",
 ];
 
-/** Sophisticated monocle icon — minimal, elegant */
-const MonocleIcon = ({ className }: { className?: string }) => (
+/** Sophisticated top hat icon — minimal, elegant */
+const TopHatIcon = ({ className }: { className?: string }) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.6"
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
   >
-    <circle cx="12" cy="10" r="6" />
-    <circle cx="12" cy="10" r="3.5" />
-    <path d="M12 16v5" />
-    <path d="M10 21h4" />
-    <circle cx="12" cy="10" r="1" fill="currentColor" stroke="none" />
+    {/* Hat brim */}
+    <ellipse cx="12" cy="18" rx="10" ry="2.5" />
+    {/* Hat body */}
+    <path d="M7 18V10c0-1 .5-2 1.5-2.5L10 7V4c0-.5.5-1 1-1h2c.5 0 1 .5 1 1v3l1.5.5C16.5 8 17 9 17 10v8" />
+    {/* Hat band */}
+    <path d="M7.5 12.5h9" strokeWidth="1.2" />
   </svg>
 );
 
@@ -115,24 +117,54 @@ export const FinancialAdvisorChat = () => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  const handleExportChat = async () => {
+    if (messages.length === 0) {
+      toast.info("Nenhuma mensagem para exportar.");
+      return;
+    }
+    const summary = messages
+      .map((m) => `• [${m.role === "user" ? "Você" : "Consultor"}]: ${m.content}`)
+      .join("\n\n");
+    const text = `📋 Resumo do Consultor Financeiro — GutiosCoins\n\n${summary}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Resumo copiado!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  };
+
   const chatContent = (
     <div className="flex flex-col h-full">
       {/* Minimal glassmorphism header */}
       <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <MonocleIcon className="h-4.5 w-4.5 text-primary" />
+          <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+            <TopHatIcon className="h-4.5 w-4.5 text-purple-500" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground leading-none">Consultor</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Powered by IA</p>
           </div>
         </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={clearMessages} title="Limpar conversa">
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-accent/50"
+              onClick={handleExportChat}
+              title="Copiar resumo"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {messages.length > 0 && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={clearMessages} title="Limpar conversa">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Messages area */}
@@ -143,8 +175,8 @@ export const FinancialAdvisorChat = () => {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <div className="h-14 w-14 rounded-full bg-primary/5 flex items-center justify-center mb-4">
-              <MonocleIcon className="h-7 w-7 text-primary/60" />
+            <div className="h-14 w-14 rounded-full bg-purple-500/5 flex items-center justify-center mb-4">
+              <TopHatIcon className="h-7 w-7 text-purple-500/60" />
             </div>
             <p className="text-sm text-foreground font-medium text-center">
               Olá! Sou seu consultor financeiro.
@@ -160,8 +192,8 @@ export const FinancialAdvisorChat = () => {
             ))}
             {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex gap-2 items-start">
-                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Sparkles className="h-3 w-3 text-primary" />
+                <div className="h-6 w-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Sparkles className="h-3 w-3 text-purple-500" />
                 </div>
                 <div className="bg-muted/50 backdrop-blur-sm rounded-2xl rounded-tl-sm px-4 py-3 text-sm">
                   <div className="flex gap-1 text-muted-foreground">
@@ -215,13 +247,13 @@ export const FinancialAdvisorChat = () => {
 
   return (
     <>
-      {/* FAB — sophisticated monocle icon */}
+      {/* FAB — sophisticated top hat icon */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-xl shadow-primary/20 border-none"
+        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-xl shadow-purple-500/20 border-none bg-purple-600 hover:bg-purple-700 text-white"
         size="icon"
       >
-        <MonocleIcon className="h-6 w-6" />
+        <TopHatIcon className="h-6 w-6" />
       </Button>
 
       {/* Overlay backdrop */}
@@ -265,15 +297,15 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   return (
     <div className={`flex gap-2 items-start ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
-        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-          <Sparkles className="h-3 w-3 text-primary" />
+        <div className="h-6 w-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+          <Sparkles className="h-3 w-3 text-purple-500" />
         </div>
       )}
       <div
         className={cn(
           "max-w-[82%] px-4 py-2.5 text-sm leading-relaxed",
           isUser
-            ? "bg-primary text-primary-foreground ml-auto rounded-2xl rounded-tr-sm"
+            ? "bg-purple-600 text-white ml-auto rounded-2xl rounded-tr-sm"
             : "bg-muted/50 backdrop-blur-sm text-foreground rounded-2xl rounded-tl-sm"
         )}
       >
