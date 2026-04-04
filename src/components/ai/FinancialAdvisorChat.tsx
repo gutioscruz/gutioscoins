@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Trash2, Sparkles, Loader2, Copy } from "lucide-react";
+import { Send, Trash2, Sparkles, Loader2, Copy, Landmark, TrendingUp, Receipt, CreditCard, ArrowUpDown, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useFinancialAdvisor, ChatMessage } from "@/hooks/useFinancialAdvisor";
+import { Progress } from "@/components/ui/progress";
+import { useFinancialAdvisor, ChatMessage, PendingToolCall } from "@/hooks/useFinancialAdvisor";
 import { useFinance } from "@/contexts/FinanceContext";
 import { useCommitments } from "@/hooks/useCommitments";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -23,25 +24,127 @@ const QUICK_SUGGESTIONS = [
   "Projeção para SP",
 ];
 
-/** Sophisticated top hat icon — minimal, elegant */
 const TopHatIcon = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    {/* Hat brim */}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <ellipse cx="12" cy="18" rx="10" ry="2.5" />
-    {/* Hat body */}
     <path d="M7 18V10c0-1 .5-2 1.5-2.5L10 7V4c0-.5.5-1 1-1h2c.5 0 1 .5 1 1v3l1.5.5C16.5 8 17 9 17 10v8" />
-    {/* Hat band */}
     <path d="M7.5 12.5h9" strokeWidth="1.2" />
   </svg>
 );
+
+const getToolMeta = (toolName: string) => {
+  switch (toolName) {
+    case "manage_bank_account":
+      return { icon: Landmark, label: "Conta Bancária", module: "patrimonio", color: "text-blue-500", bgColor: "bg-blue-500/10" };
+    case "manage_investment":
+      return { icon: TrendingUp, label: "Investimento", module: "patrimonio", color: "text-emerald-500", bgColor: "bg-emerald-500/10" };
+    case "manage_loan":
+      return { icon: Receipt, label: "Empréstimo", module: "compromissos", color: "text-orange-500", bgColor: "bg-orange-500/10" };
+    case "manage_installment":
+      return { icon: CreditCard, label: "Parcelas", module: "compromissos", color: "text-pink-500", bgColor: "bg-pink-500/10" };
+    case "manage_transaction":
+      return { icon: ArrowUpDown, label: "Transação", module: "transacoes", color: "text-purple-500", bgColor: "bg-purple-500/10" };
+    default:
+      return { icon: Sparkles, label: "Ação", module: "geral", color: "text-muted-foreground", bgColor: "bg-muted/10" };
+  }
+};
+
+const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+const PendingActionCard = ({
+  action,
+  onApprove,
+  onCancel,
+  isLoading,
+}: {
+  action: PendingToolCall;
+  onApprove: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) => {
+  const meta = getToolMeta(action.toolName);
+  const Icon = meta.icon;
+  const args = action.arguments;
+
+  return (
+    <div className="rounded-3xl bg-card/40 backdrop-blur-md border border-purple-500/20 p-4 space-y-3 mx-1">
+      {/* Header */}
+      <div className="flex items-center gap-2.5">
+        <div className={cn("h-8 w-8 rounded-2xl flex items-center justify-center", meta.bgColor)}>
+          <Icon className={cn("h-4 w-4", meta.color)} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-foreground">{meta.label}</p>
+          <p className="text-[10px] text-muted-foreground capitalize">{args.action || "ação"}</p>
+        </div>
+      </div>
+
+      {/* Module-specific content */}
+      {meta.module === "patrimonio" && (
+        <div className="space-y-1 text-xs text-muted-foreground">
+          {args.name && <p>📌 <span className="text-foreground font-medium">{args.name}</span></p>}
+          {args.balance !== undefined && <p>💰 Saldo: <span className="text-foreground font-medium">{formatCurrency(args.balance)}</span></p>}
+          {args.amount !== undefined && <p>💰 Valor: <span className="text-foreground font-medium">{formatCurrency(args.amount)}</span></p>}
+          {args.type && <p>📂 Tipo: <span className="text-foreground font-medium">{args.type}</span></p>}
+        </div>
+      )}
+
+      {meta.module === "compromissos" && (
+        <div className="space-y-2">
+          <div className="space-y-1 text-xs text-muted-foreground">
+            {args.name && <p>📌 <span className="text-foreground font-medium">{args.name}</span></p>}
+            {args.principal && <p>💰 Principal: <span className="text-foreground font-medium">{formatCurrency(args.principal)}</span></p>}
+            {args.total_amount && <p>💰 Total: <span className="text-foreground font-medium">{formatCurrency(args.total_amount)}</span></p>}
+            {args.installments && <p>📊 Parcelas: <span className="text-foreground font-medium">{args.installments}x</span></p>}
+            {args.installment_count && <p>📊 Parcelas: <span className="text-foreground font-medium">{args.installment_count}x</span></p>}
+            {args.interest_rate !== undefined && <p>📈 Juros: <span className="text-foreground font-medium">{args.interest_rate}% a.m.</span></p>}
+          </div>
+          {args.principal && args.installments && (
+            <Progress value={0} className="h-2 rounded-full" />
+          )}
+        </div>
+      )}
+
+      {meta.module === "transacoes" && (
+        <div className="space-y-1 text-xs text-muted-foreground">
+          {args.description && <p>📝 <span className="text-foreground font-medium">{args.description}</span></p>}
+          {args.amount !== undefined && (
+            <p>
+              {args.type === "income" ? "📈" : "📉"}{" "}
+              <span className={cn("font-medium", args.type === "income" ? "text-emerald-500" : "text-foreground")}>
+                {args.type === "income" ? "+" : ""}{formatCurrency(args.amount)}
+              </span>
+            </p>
+          )}
+          {args.date && <p>📅 Data: <span className="text-foreground font-medium">{new Date(args.date).toLocaleDateString("pt-BR")}</span></p>}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-1">
+        <Button
+          size="sm"
+          onClick={onApprove}
+          disabled={isLoading}
+          className="flex-1 h-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+        >
+          {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          Aprovar
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isLoading}
+          className="flex-1 h-8 rounded-2xl text-xs gap-1.5 hover:bg-destructive/10 hover:text-destructive"
+        >
+          <X className="h-3 w-3" />
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export const FinancialAdvisorChat = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,7 +152,7 @@ export const FinancialAdvisorChat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const { messages, isLoading, isLoadingHistory, sendMessage, clearMessages } =
+  const { messages, isLoading, isLoadingHistory, pendingAction, sendMessage, clearMessages, approveAction, cancelAction } =
     useFinancialAdvisor();
 
   const { transactions, categories, goals } = useFinance();
@@ -68,17 +171,11 @@ export const FinancialAdvisorChat = () => {
       return !isBefore(d, monthStart) && !isAfter(d, monthEnd);
     });
 
-    const monthlyIncome = monthTransactions
-      .filter((t) => t.type === "income")
-      .reduce((s, t) => s + t.amount, 0);
-    const monthlyExpenses = monthTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((s, t) => s + t.amount, 0);
+    const monthlyIncome = monthTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const monthlyExpenses = monthTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
 
     const catMap = new Map<string, number>();
-    monthTransactions
-      .filter((t) => t.type === "expense")
-      .forEach((t) => catMap.set(t.categoryId, (catMap.get(t.categoryId) || 0) + t.amount));
+    monthTransactions.filter((t) => t.type === "expense").forEach((t) => catMap.set(t.categoryId, (catMap.get(t.categoryId) || 0) + t.amount));
 
     const topExpenseCategories = Array.from(catMap.entries())
       .sort(([, a], [, b]) => b - a)
@@ -104,7 +201,7 @@ export const FinancialAdvisorChat = () => {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+  }, [messages, pendingAction]);
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -118,44 +215,31 @@ export const FinancialAdvisorChat = () => {
   };
 
   const handleExportChat = async () => {
-    if (messages.length === 0) {
-      toast.info("Nenhuma mensagem para exportar.");
-      return;
-    }
-    const summary = messages
-      .map((m) => `• [${m.role === "user" ? "Você" : "Consultor"}]: ${m.content}`)
-      .join("\n\n");
+    if (messages.length === 0) { toast.info("Nenhuma mensagem para exportar."); return; }
+    const summary = messages.map((m) => `• [${m.role === "user" ? "Você" : "Consultor"}]: ${m.content}`).join("\n\n");
     const text = `📋 Resumo do Consultor Financeiro — GutiosCoins\n\n${summary}`;
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Resumo copiado!");
-    } catch {
-      toast.error("Não foi possível copiar.");
-    }
+    } catch { toast.error("Não foi possível copiar."); }
   };
 
   const chatContent = (
     <div className="flex flex-col h-full">
-      {/* Minimal glassmorphism header */}
+      {/* Header */}
       <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
             <TopHatIcon className="h-4.5 w-4.5 text-purple-500" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground leading-none">Consultor</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Powered by IA</p>
+            <p className="text-sm font-semibold text-foreground leading-none">Arquiteto Financeiro</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Agente Autônomo · IA</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-accent/50"
-              onClick={handleExportChat}
-              title="Copiar resumo"
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-accent/50" onClick={handleExportChat} title="Copiar resumo">
               <Copy className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -167,7 +251,7 @@ export const FinancialAdvisorChat = () => {
         </div>
       </div>
 
-      {/* Messages area */}
+      {/* Messages */}
       <ScrollArea className="flex-1 pr-1" ref={scrollRef}>
         {isLoadingHistory ? (
           <div className="flex items-center justify-center py-16">
@@ -178,11 +262,9 @@ export const FinancialAdvisorChat = () => {
             <div className="h-14 w-14 rounded-full bg-purple-500/5 flex items-center justify-center mb-4">
               <TopHatIcon className="h-7 w-7 text-purple-500/60" />
             </div>
-            <p className="text-sm text-foreground font-medium text-center">
-              Olá! Sou seu consultor financeiro.
-            </p>
+            <p className="text-sm text-foreground font-medium text-center">Olá! Sou seu arquiteto financeiro.</p>
             <p className="text-xs text-muted-foreground text-center mt-1 max-w-[240px]">
-              Pergunte sobre orçamento, metas, investimentos ou qualquer decisão financeira.
+              Posso gerenciar suas contas, transações, investimentos e empréstimos. Pergunte qualquer coisa!
             </p>
           </div>
         ) : (
@@ -190,7 +272,16 @@ export const FinancialAdvisorChat = () => {
             {messages.map((msg, i) => (
               <MessageBubble key={i} message={msg} />
             ))}
-            {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+            {/* Pending action card */}
+            {pendingAction && (
+              <PendingActionCard
+                action={pendingAction}
+                onApprove={approveAction}
+                onCancel={cancelAction}
+                isLoading={isLoading}
+              />
+            )}
+            {isLoading && !pendingAction && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex gap-2 items-start">
                 <div className="h-6 w-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
                   <Sparkles className="h-3 w-3 text-purple-500" />
@@ -213,11 +304,7 @@ export const FinancialAdvisorChat = () => {
         {messages.length === 0 && !isLoadingHistory && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {QUICK_SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                onClick={() => sendMessage(s, financialContext)}
-                className="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-secondary/40 text-secondary-foreground hover:bg-secondary/70 transition-colors whitespace-nowrap"
-              >
+              <button key={s} onClick={() => sendMessage(s, financialContext)} className="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-secondary/40 text-secondary-foreground hover:bg-secondary/70 transition-colors whitespace-nowrap">
                 {s}
               </button>
             ))}
@@ -228,16 +315,11 @@ export const FinancialAdvisorChat = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Pergunte ao seu consultor..."
+            placeholder="Pergunte ao seu arquiteto financeiro..."
             className="min-h-[40px] max-h-[100px] resize-none text-sm rounded-2xl border-border/50 bg-background/60 backdrop-blur-sm"
             rows={1}
           />
-          <Button
-            size="icon"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="shrink-0 rounded-2xl h-10 w-10"
-          >
+          <Button size="icon" onClick={handleSend} disabled={!input.trim() || isLoading} className="shrink-0 rounded-2xl h-10 w-10">
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -247,44 +329,28 @@ export const FinancialAdvisorChat = () => {
 
   return (
     <>
-      {/* FAB — sophisticated top hat icon */}
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-xl shadow-purple-500/20 border-none bg-purple-600 hover:bg-purple-700 text-white"
-        size="icon"
-      >
+      <Button onClick={() => setIsOpen(true)} className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-xl shadow-purple-500/20 border-none bg-purple-600 hover:bg-purple-700 text-white" size="icon">
         <TopHatIcon className="h-6 w-6" />
       </Button>
 
-      {/* Overlay backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] transition-opacity"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] transition-opacity" onClick={() => setIsOpen(false)} />
       )}
 
-      {/* Floating panel — NOT full screen */}
       {isOpen && (
-        <div
-          className={cn(
-            "fixed z-50 flex flex-col border-none shadow-2xl shadow-black/10 overflow-hidden transition-all duration-300",
-            "bg-card/80 backdrop-blur-xl",
-            isMobile
-              ? "bottom-0 left-0 right-0 h-[75vh] rounded-t-[2rem]"
-              : "bottom-6 right-6 w-[380px] h-[600px] max-h-[80vh] rounded-[1.75rem]"
-          )}
-        >
-          {/* Drag indicator on mobile */}
+        <div className={cn(
+          "fixed z-50 flex flex-col border-none shadow-2xl shadow-black/10 overflow-hidden transition-all duration-300",
+          "bg-card/80 backdrop-blur-xl",
+          isMobile
+            ? "bottom-0 left-0 right-0 h-[75vh] rounded-t-[2rem]"
+            : "bottom-6 right-6 w-[380px] h-[600px] max-h-[80vh] rounded-[1.75rem]"
+        )}>
           {isMobile && (
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
             </div>
           )}
-
-          <div className="flex-1 overflow-hidden p-5 pt-3">
-            {chatContent}
-          </div>
+          <div className="flex-1 overflow-hidden p-5 pt-3">{chatContent}</div>
         </div>
       )}
     </>
@@ -293,7 +359,6 @@ export const FinancialAdvisorChat = () => {
 
 const MessageBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === "user";
-
   return (
     <div className={`flex gap-2 items-start ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
@@ -301,14 +366,12 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
           <Sparkles className="h-3 w-3 text-purple-500" />
         </div>
       )}
-      <div
-        className={cn(
-          "max-w-[82%] px-4 py-2.5 text-sm leading-relaxed",
-          isUser
-            ? "bg-purple-600 text-white ml-auto rounded-2xl rounded-tr-sm"
-            : "bg-muted/50 backdrop-blur-sm text-foreground rounded-2xl rounded-tl-sm"
-        )}
-      >
+      <div className={cn(
+        "max-w-[82%] px-4 py-2.5 text-sm leading-relaxed",
+        isUser
+          ? "bg-purple-600 text-white ml-auto rounded-2xl rounded-tr-sm"
+          : "bg-muted/50 backdrop-blur-sm text-foreground rounded-2xl rounded-tl-sm"
+      )}>
         {isUser ? (
           <span className="whitespace-pre-wrap">{message.content}</span>
         ) : (
