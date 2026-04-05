@@ -191,7 +191,7 @@ export const FinancialAdvisorChat = () => {
     loans: (loans || []).map((l: any) => ({ id: l.id, name: l.name, status: l.status, principal: l.principal })),
     investments: (investments || []).map((i: any) => ({ id: i.id, name: i.name, type: i.type, amount: i.amount })),
     cards: allCards,
-  }), [banks, categories, loans, investments, cards]);
+  }), [banks, categories, loans, investments, allCards]);
 
   const financialContext = useMemo(() => {
     const now = new Date();
