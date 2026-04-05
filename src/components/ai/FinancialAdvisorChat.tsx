@@ -12,7 +12,6 @@ import { useBudgetAreas } from "@/hooks/useBudgetAreas";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBanks } from "@/hooks/useBanks";
-import { useCards } from "@/hooks/useCards";
 import { useInvestments } from "@/hooks/useInvestments";
 import { useLoans } from "@/hooks/useLoans";
 import { startOfMonth, endOfMonth, isAfter, isBefore, parseISO } from "date-fns";
