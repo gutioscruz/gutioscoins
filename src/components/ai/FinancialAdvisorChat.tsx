@@ -180,7 +180,7 @@ export const FinancialAdvisorChat = () => {
   const { budgetAreas } = useBudgetAreas();
   const { wishlistItems } = useWishlist();
   const { banks } = useBanks();
-  const { cards } = useCards();
+  const allCards = useMemo(() => (banks || []).flatMap((b: any) => (b.cards || []).map((c: any) => ({ id: c.id, name: c.name, bank_id: b.id }))), [banks]);
   const { investments } = useInvestments();
   const { loans } = useLoans();
 
