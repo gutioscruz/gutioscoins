@@ -6,67 +6,58 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o **Arquiteto Financeiro Pessoal** do usuário no app GutiosCoins. Seu tom é altamente profissional, empático, polido e matemático. Você domina fórmulas financeiras (Tabela Price, juros compostos, TIR).
+const SYSTEM_PROMPT = `Você é o **Wealth Manager** pessoal do usuário no GutiosCoins — um gestor de patrimônio de elite, sofisticado e com raciocínio matemático afiado.
 
-## Autoridade e Capacidades
+## Tom e Estilo
 
-Você tem autoridade para:
-- **Transações**: Registrar, editar e remover receitas e despesas
-- **Patrimônio**: Ajustar saldos de contas bancárias, registrar/atualizar investimentos
-- **Compromissos**: Criar e gerenciar empréstimos (incluindo Consignado CLT), adicionar parcelas
-- **Leitura**: Consultar o resumo financeiro completo para embasar suas análises
+Fale de forma fluida, elegante e direta. Nada de listas mecânicas ou relatórios burocráticos. Converse como um consultor financeiro premium conversaria com seu cliente de confiança — natural, perspicaz, com pitadas de humor quando apropriado.
 
-## Perfil do Cliente
+## Capacidades
 
-- Preparando **mudança estratégica de Salvador para São Paulo (Consolação)**, trabalho híbrido no Cetrus (Vila Mariana), 3x/semana.
-- **Atleta** de basquete e Hyrox, 1,96m e 100kg. Gastos com supermercado (proteínas, dieta limpa) e saúde (TotalPass) são **investimentos inegociáveis** na performance — NUNCA critique esses gastos.
-- Meta principal: **zerar empréstimos** e **poupar 15-20%** do salário (~R$ 6.800 brutos).
+Você tem acesso direto ao sistema para:
+- **Transações**: Registrar, editar e remover receitas/despesas
+- **Patrimônio**: Ajustar saldos bancários, gerir investimentos
+- **Compromissos**: Criar/editar empréstimos (Price Table), parcelas
+- **Leitura**: Consultar resumo financeiro completo
 
-## Regras de Atuação
+## Contexto Estratégico (use com sutileza)
 
-### 🔒 REGRA ABSOLUTA: Planejamento Obrigatório
-ANTES de qualquer tool_call, você DEVE obrigatoriamente gerar um texto explicando:
-1. **O QUE** você identificou (situação atual)
-2. **COMO** pretende alterar o sistema (ação específica)
-3. **QUAL O IMPACTO** (efeito no saldo, limite, dívida, etc.)
+O cliente está em transição para São Paulo e é atleta de alta performance (100kg, basquete/Hyrox). Gastos com alimentação de qualidade e saúde são investimentos na performance — valide-os naturalmente sem mencionar isso a cada interação. Meta de salário: ~R$ 6.800.
 
-NUNCA execute uma ferramenta sem antes apresentar esse plano textual. O usuário precisa aprovar clicando no botão antes da ação ser executada.
+## 🔒 REGRA DE OURO: Human-in-the-Loop
 
-### 📊 Análise Matemática
-Sempre apresente impacto com números concretos. Mostre projeções e custos de oportunidade.
+Quando o cliente pedir uma alteração, proponha elegantemente — por exemplo:
+*"Perfeito. Posso registar esse salário na sua Inter para atualizarmos o fluxo de Abril?"*
 
-### 🛑 Controle de Impulso
-Para compras de eletrônicos/gadgets/lazer caros, apresente o custo de oportunidade com dados. Sugira a Wishlist e a regra das 48h.
+Ao propor uma ação que modifica dados, use a ferramenta adequada. O sistema interceptará e mostrará um card de confirmação. Você NUNCA executa sem aprovação.
 
-### 🥦 Defesa da Dieta
-Valide gastos com hortifrúti, atacarejos, suplementos. Elogie o fato de cozinhar em casa.
+## 🧠 Mapeamento Técnico de IDs
 
-### 💡 Amortização Inteligente
-Ao lidar com Compromissos, SEMPRE sugira amortizações inteligentes se houver saldo sobrando. Calcule a economia de juros.
+**CRÍTICO**: No contexto financeiro você recebe um objeto \`dataMap\` com os dados reais do usuário (banks, categories, loans) incluindo seus UUIDs. Ao chamar ferramentas de CRUD, use ESTRITAMENTE os UUIDs desse mapeamento. NUNCA invente IDs ou use nomes como identificadores.
 
-### 🔄 Sincronização de Patrimônio
-Ao lidar com contas bancárias, mantenha os saldos sempre sincronizados com o que o usuário relata.
+Exemplo: Se o usuário diz "coloca na Inter", procure no dataMap.banks o objeto com name contendo "Inter" e use o UUID dele como bank_id.
 
-## Formato de Resposta
-- Parágrafos curtos, listas quando apropriado
-- Destaque valores em **negrito**
-- Subtítulos com ## para respostas longas
-- Emojis com moderação
-- Sempre em português brasileiro, usando R$
-- Mostre fórmulas/raciocínio brevemente nos cálculos`;
+## Inteligência Financeira
+
+- Quando há saldo sobrando e dívidas ativas, sugira amortizações — calcule a economia de juros
+- Use Tabela Price nos cálculos de empréstimos
+- Apresente números concretos, não generalidades
+- Para compras impulsivas > R$150: sugira a Wishlist e a regra das 48h
+
+## Formato
+
+- Parágrafos curtos, markdown com moderação
+- Valores em **negrito**
+- Emojis com parcimônia
+- Sempre em PT-BR, usando R$`;
 
 const TOOLS = [
   {
     type: "function",
     function: {
       name: "get_financial_summary",
-      description: "Busca o resumo financeiro completo do usuário: contas bancárias, investimentos, empréstimos ativos e transações recentes. Use para embasar análises.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-        additionalProperties: false,
-      },
+      description: "Busca o resumo financeiro completo: contas, investimentos, empréstimos e transações recentes.",
+      parameters: { type: "object", properties: {}, required: [], additionalProperties: false },
     },
   },
   {
@@ -78,7 +69,7 @@ const TOOLS = [
         type: "object",
         properties: {
           action: { type: "string", enum: ["add", "update", "delete"] },
-          bank_id: { type: "string", description: "ID da conta (obrigatório para update/delete)" },
+          bank_id: { type: "string", description: "UUID da conta (obrigatório para update/delete)" },
           name: { type: "string" },
           type: { type: "string", enum: ["checking", "savings", "credit"] },
           balance: { type: "number" },
@@ -99,7 +90,7 @@ const TOOLS = [
         type: "object",
         properties: {
           action: { type: "string", enum: ["add", "update", "delete"] },
-          investment_id: { type: "string", description: "ID do investimento (obrigatório para update/delete)" },
+          investment_id: { type: "string", description: "UUID do investimento (obrigatório para update/delete)" },
           name: { type: "string" },
           type: { type: "string", enum: ["stocks", "funds", "crypto", "fixed-income", "other"] },
           amount: { type: "number" },
@@ -115,19 +106,19 @@ const TOOLS = [
     type: "function",
     function: {
       name: "manage_loan",
-      description: "Gerencia empréstimos: criar ou atualizar (incluindo Consignado CLT, Fatura Parcelada, Pessoal). Usa Tabela Price para amortização.",
+      description: "Gerencia empréstimos (Consignado CLT, Fatura Parcelada, Pessoal). Usa Tabela Price.",
       parameters: {
         type: "object",
         properties: {
           action: { type: "string", enum: ["create", "update"] },
-          loan_id: { type: "string", description: "ID do empréstimo (obrigatório para update)" },
+          loan_id: { type: "string", description: "UUID do empréstimo (obrigatório para update)" },
           name: { type: "string" },
           description: { type: "string" },
           principal: { type: "number" },
-          interest_rate: { type: "number", description: "Taxa de juros mensal em %" },
+          interest_rate: { type: "number", description: "Taxa mensal em %" },
           installments: { type: "integer" },
           payment_frequency: { type: "string", enum: ["monthly", "biweekly", "weekly"] },
-          start_date: { type: "string", description: "Data de início ISO" },
+          start_date: { type: "string", description: "ISO date" },
           loan_type: { type: "string", enum: ["consignado", "fatura_parcelada", "pessoal"] },
           bank_id: { type: "string" },
           category_id: { type: "string" },
@@ -143,20 +134,20 @@ const TOOLS = [
     type: "function",
     function: {
       name: "manage_installment",
-      description: "Gerencia compras parceladas: adicionar ou editar transações parceladas.",
+      description: "Gerencia compras parceladas: adicionar ou editar.",
       parameters: {
         type: "object",
         properties: {
           action: { type: "string", enum: ["add", "update"] },
-          transaction_id: { type: "string", description: "ID da transação pai (para update)" },
+          transaction_id: { type: "string", description: "UUID da transação pai (para update)" },
           description: { type: "string" },
-          total_amount: { type: "number", description: "Valor total da compra" },
-          installment_count: { type: "integer", description: "Número de parcelas" },
+          total_amount: { type: "number" },
+          installment_count: { type: "integer" },
           bank_id: { type: "string" },
           card_id: { type: "string" },
           category_id: { type: "string" },
           subcategory: { type: "string" },
-          start_date: { type: "string", description: "Data da primeira parcela ISO" },
+          start_date: { type: "string", description: "ISO date da primeira parcela" },
         },
         required: ["action"],
         additionalProperties: false,
@@ -167,16 +158,16 @@ const TOOLS = [
     type: "function",
     function: {
       name: "manage_transaction",
-      description: "Gerencia transações avulsas: adicionar, atualizar ou remover receitas e despesas.",
+      description: "Gerencia transações avulsas: adicionar, atualizar ou remover receitas/despesas.",
       parameters: {
         type: "object",
         properties: {
           action: { type: "string", enum: ["add", "update", "delete"] },
-          transaction_id: { type: "string", description: "ID da transação (obrigatório para update/delete)" },
+          transaction_id: { type: "string", description: "UUID da transação (obrigatório para update/delete)" },
           description: { type: "string" },
           amount: { type: "number" },
           type: { type: "string", enum: ["income", "expense"] },
-          date: { type: "string", description: "Data ISO" },
+          date: { type: "string", description: "ISO date" },
           bank_id: { type: "string" },
           card_id: { type: "string" },
           category_id: { type: "string" },
@@ -195,7 +186,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, financialContext, toolResults } = await req.json();
+    const { messages, financialContext, dataMap, toolResults } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -203,38 +194,44 @@ serve(async (req) => {
       throw new Error("Serviço de IA não configurado");
     }
 
-    let contextMessage = "";
+    // Build context injection
+    let contextBlock = "";
+
+    // Inject dataMap (real UUIDs for CRUD)
+    if (dataMap) {
+      contextBlock += `\n\n--- MAPEAMENTO DE DADOS (dataMap) ---\n${JSON.stringify(dataMap, null, 2)}\n--- FIM dataMap ---`;
+    }
+
+    // Inject financial summary
     if (financialContext) {
       const parts: string[] = [];
       if (financialContext.monthlyIncome !== undefined)
-        parts.push(`💰 Receita mensal: R$ ${financialContext.monthlyIncome.toFixed(2)}`);
+        parts.push(`Receita mensal: R$ ${financialContext.monthlyIncome.toFixed(2)}`);
       if (financialContext.monthlyExpenses !== undefined)
-        parts.push(`💸 Despesas mensais: R$ ${financialContext.monthlyExpenses.toFixed(2)}`);
+        parts.push(`Despesas mensais: R$ ${financialContext.monthlyExpenses.toFixed(2)}`);
       if (financialContext.balance !== undefined)
-        parts.push(`📊 Saldo mensal: R$ ${financialContext.balance.toFixed(2)}`);
+        parts.push(`Saldo mensal: R$ ${financialContext.balance.toFixed(2)}`);
       if (financialContext.totalCommitments !== undefined)
-        parts.push(`📋 Compromissos ativos: ${financialContext.commitmentsCount || 0} (total restante: R$ ${financialContext.totalCommitments.toFixed(2)})`);
+        parts.push(`Compromissos ativos: ${financialContext.commitmentsCount || 0} (restante: R$ ${financialContext.totalCommitments.toFixed(2)})`);
       if (financialContext.thisMonthCommitments !== undefined)
-        parts.push(`📅 Compromissos este mês: R$ ${financialContext.thisMonthCommitments.toFixed(2)}`);
+        parts.push(`Compromissos este mês: R$ ${financialContext.thisMonthCommitments.toFixed(2)}`);
       if (financialContext.budgetAreas?.length > 0)
-        parts.push(`🎯 Áreas do orçamento: ${financialContext.budgetAreas.map((a: any) => `${a.name} (${a.percentage}%)`).join(", ")}`);
+        parts.push(`Áreas orçamento: ${financialContext.budgetAreas.map((a: any) => `${a.name} (${a.percentage}%)`).join(", ")}`);
       if (financialContext.topExpenseCategories?.length > 0)
-        parts.push(`🔥 Top categorias de gasto: ${financialContext.topExpenseCategories.map((c: any) => `${c.name}: R$ ${c.amount.toFixed(2)}`).join(", ")}`);
+        parts.push(`Top gastos: ${financialContext.topExpenseCategories.map((c: any) => `${c.name}: R$ ${c.amount.toFixed(2)}`).join(", ")}`);
       if (financialContext.activeGoals?.length > 0)
-        parts.push(`🎯 Metas ativas: ${financialContext.activeGoals.map((g: any) => `${g.name} (R$ ${g.current.toFixed(2)} / R$ ${g.target.toFixed(2)})`).join(", ")}`);
+        parts.push(`Metas: ${financialContext.activeGoals.map((g: any) => `${g.name} (R$ ${g.current.toFixed(2)}/${g.target.toFixed(2)})`).join(", ")}`);
       if (financialContext.wishlistItems?.length > 0)
-        parts.push(`🛒 Lista de desejos: ${financialContext.wishlistItems.map((w: any) => `${w.name}: R$ ${w.price.toFixed(2)}`).join(", ")}`);
+        parts.push(`Wishlist: ${financialContext.wishlistItems.map((w: any) => `${w.name}: R$ ${w.price.toFixed(2)}`).join(", ")}`);
       if (parts.length > 0)
-        contextMessage = `\n\n--- DADOS FINANCEIROS ATUAIS DO CLIENTE ---\n${parts.join("\n")}\n--- FIM DOS DADOS ---`;
+        contextBlock += `\n\n--- RESUMO FINANCEIRO ---\n${parts.join("\n")}\n--- FIM RESUMO ---`;
     }
 
-    // Build the messages array for the AI
     const aiMessages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT + contextMessage },
+      { role: "system", content: SYSTEM_PROMPT + contextBlock },
       ...messages,
     ];
 
-    // If we have tool results, append them
     if (toolResults && toolResults.length > 0) {
       for (const tr of toolResults) {
         aiMessages.push({
@@ -245,7 +242,7 @@ serve(async (req) => {
       }
     }
 
-    console.log("Sending request to Lovable AI with tools:", TOOLS.length, "context:", contextMessage ? "yes" : "no");
+    console.log("AI request — tools:", TOOLS.length, "dataMap:", dataMap ? "yes" : "no");
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -270,13 +267,13 @@ serve(async (req) => {
 
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Muitas requisições. Aguarde um momento e tente novamente." }),
+          JSON.stringify({ error: "Muitas requisições. Aguarde um momento." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao seu workspace." }),
+          JSON.stringify({ error: "Créditos insuficientes." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -287,13 +284,7 @@ serve(async (req) => {
       );
     }
 
-    // We need to check if the response contains tool_calls.
-    // Since we're streaming, we need to collect the full response and detect tool_calls.
-    // We'll buffer the stream and check for tool_calls in the final message.
-    
-    // Strategy: Read the stream, collect tool_call deltas. If we detect tool_calls,
-    // return a JSON response. Otherwise, re-stream the text content.
-    
+    // Buffer stream to detect tool_calls vs text
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -323,11 +314,11 @@ serve(async (req) => {
         try {
           const parsed = JSON.parse(jsonStr);
           const choice = parsed.choices?.[0];
-          
+
           if (choice?.delta?.content) {
             collectedContent += choice.delta.content;
           }
-          
+
           if (choice?.delta?.tool_calls) {
             hasToolCalls = true;
             for (const tc of choice.delta.tool_calls) {
@@ -340,39 +331,30 @@ serve(async (req) => {
               if (tc.function?.arguments) toolCalls[idx].function.arguments += tc.function.arguments;
             }
           }
-          
+
           if (choice?.finish_reason === "tool_calls") {
             hasToolCalls = true;
           }
-        } catch { /* partial JSON, skip */ }
+        } catch { /* partial JSON */ }
       }
     }
 
     if (hasToolCalls && toolCalls.length > 0) {
-      // Parse the tool call arguments
       const parsedCalls = toolCalls.map((tc) => {
         let args = {};
-        try { args = JSON.parse(tc.function.arguments); } catch { /* empty */ }
-        return {
-          id: tc.id,
-          toolName: tc.function.name,
-          arguments: args,
-        };
+        try { args = JSON.parse(tc.function.arguments); } catch { /* */ }
+        return { id: tc.id, toolName: tc.function.name, arguments: args };
       });
 
-      console.log("Tool calls detected:", parsedCalls.map(c => c.toolName));
+      console.log("Tool calls:", parsedCalls.map(c => c.toolName));
 
       return new Response(
-        JSON.stringify({
-          type: "tool_call",
-          planText: collectedContent || "",
-          calls: parsedCalls,
-        }),
+        JSON.stringify({ type: "tool_call", planText: collectedContent || "", calls: parsedCalls }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // No tool calls — return as SSE stream (reconstruct from collected chunks)
+    // Text response — re-stream
     const body = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
