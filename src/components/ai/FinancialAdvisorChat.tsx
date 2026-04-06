@@ -395,7 +395,7 @@ export const FinancialAdvisorChat = () => {
           </div>
         ) : (
           <div className="space-y-3 pb-1">
-            {messages.map((msg, i) => (
+            {messages.filter(m => m.role !== "tool" && (m.role === "user" || m.content.trim() !== "")).map((msg, i) => (
               <MessageBubble key={i} message={msg} />
             ))}
             {pendingAction && (

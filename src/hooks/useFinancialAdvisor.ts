@@ -6,8 +6,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { addMonths } from "date-fns";
 
 export interface ChatMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
+  tool_calls?: any[];
+  tool_call_id?: string;
+  name?: string;
 }
 
 export interface PendingToolCall {
@@ -235,6 +238,21 @@ export function useFinancialAdvisor() {
     };
   }, [user?.id]);
 
+  const executeSearchTransactions = useCallback(async (args: any) => {
+    if (!user?.id) return { error: "Not authenticated" };
+    let query = supabase.from("transactions").select("id, description, amount, type, category_id, bank_id, card_id, date, is_installment, installment_number, installment_count").eq("user_id", user.id).order("date", { ascending: false }).limit(200);
+
+    if (args.start_date) query = query.gte("date", args.start_date);
+    if (args.end_date) query = query.lte("date", args.end_date);
+    if (args.bank_id) query = query.eq("bank_id", args.bank_id);
+    if (args.card_id_is_null) query = query.is("card_id", null);
+    if (args.query) query = query.ilike("description", `%${args.query}%`);
+
+    const { data, error } = await query;
+    if (error) return { error: error.message };
+    return { transactions: data || [] };
+  }, [user?.id]);
+
   const sendMessage = useCallback(
     async (input: string, financialContext?: FinancialContext, dataMap?: DataMap) => {
       const userMsg: ChatMessage = { role: "user", content: input };
@@ -285,11 +303,40 @@ export function useFinancialAdvisor() {
             const call = data.calls[0];
 
             // Auto-approve read-only tools
-            if (call.toolName === "get_financial_summary") {
-              const summaryResult = await executeGetFinancialSummary();
+            if (call.toolName === "get_financial_summary" || call.toolName === "search_transactions") {
+              let toolResult;
+              if (call.toolName === "get_financial_summary") {
+                toolResult = await executeGetFinancialSummary();
+              } else {
+                toolResult = await executeSearchTransactions(call.arguments);
+              }
+
+              const assistantMsg: ChatMessage = { 
+                role: "assistant", 
+                content: data.planText || "",
+                tool_calls: data.calls.map((c: any) => ({
+                  id: c.id,
+                  type: "function",
+                  function: { name: c.toolName, arguments: JSON.stringify(c.arguments) }
+                }))
+              };
+
+              const toolMsg: ChatMessage = {
+                role: "tool",
+                content: JSON.stringify(toolResult),
+                tool_call_id: call.id,
+                name: call.toolName
+              };
+
+              setMessages((prev) => [...prev, assistantMsg, toolMsg]);
+
+              if (user?.id && data.planText) {
+                persistMessage(user.id, "assistant", data.planText, sessionId || undefined);
+              }
+
               const followUpMessages = [
                 ...allMessages,
-                ...(data.planText ? [{ role: "assistant" as const, content: data.planText }] : []),
+                assistantMsg
               ];
 
               const followUpResp = await fetch(CHAT_URL, {
@@ -302,7 +349,7 @@ export function useFinancialAdvisor() {
                   messages: followUpMessages,
                   financialContext,
                   dataMap,
-                  toolResults: [{ tool_call_id: call.id, result: summaryResult }],
+                  toolResults: [{ tool_call_id: call.id, result: toolResult }],
                 }),
               });
 
@@ -333,7 +380,7 @@ export function useFinancialAdvisor() {
         setIsLoading(false);
       }
     },
-    [messages, user?.id, activeSessionId, handleStreamResponse, executeGetFinancialSummary, createSession]
+    [messages, user?.id, activeSessionId, handleStreamResponse, executeGetFinancialSummary, executeSearchTransactions, createSession]
   );
 
   const approveAction = useCallback(async () => {

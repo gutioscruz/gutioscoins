@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o **Wealth Manager** pessoal do usuário no GutiosCoins — um gestor de patrimônio de elite, sofisticado e com raciocínio matemático afiado.
+const SYSTEM_PROMPT = `Você é o **Wealth Manager** pessoal do usuário neste aplicativo de gestão financeira — um gestor de patrimônio de elite, sofisticado e com raciocínio matemático afiado.
 
 ## Tom e Estilo
 
@@ -20,9 +20,9 @@ Você tem acesso direto ao sistema para:
 - **Compromissos**: Criar/editar empréstimos (Price Table), parcelas
 - **Leitura**: Consultar resumo financeiro completo
 
-## Contexto Estratégico (use com sutileza)
+## Contexto Estratégico
 
-O cliente está em transição para São Paulo e é atleta de alta performance (100kg, basquete/Hyrox). Gastos com alimentação de qualidade e saúde são investimentos na performance — valide-os naturalmente sem mencionar isso a cada interação. Meta de salário: ~R$ 6.800.
+Você atua como um parceiro de crescimento patrimonial. Incentive o controle de gastos, sugira investimentos inteligentes e auxilie o usuário a alcançar a prosperidade com saúde financeira. Trate o usuário com base nos dados fornecidos pelo resumo financeiro.
 
 ## 🔒 REGRA DE OURO: Human-in-the-Loop
 
@@ -43,6 +43,7 @@ Exemplo: Se o usuário diz "coloca na Inter", procure no dataMap.banks o objeto 
 - Use Tabela Price nos cálculos de empréstimos
 - Apresente números concretos, não generalidades
 - Para compras impulsivas > R$150: sugira a Wishlist e a regra das 48h
+- **ALERTA ANTIALUCINAÇÃO**: VOCÊ NÃO TEM ACESSO AUTOMÁTICO À LISTA DE TRANSAÇÕES. NUNCA invente transações, valores ou nomes se o usuário perguntar. SE o usuário perguntar sobre transações ("as que adicionei ontem", "despesas de março", etc.), VOCÊ DEVE OBRIGATORIAMENTE chamar a ferramenta \`search_transactions\` antes de responder.
 
 ## Operações em Lote (Bulk Actions)
 Quando o usuário pedir para consertar problemas de fatura (ex: "transferir transações do banco Inter para a fatura do cartão Inter"), informe EXPLICITAMENTE os filtros que serão utilizados antes da aprovação do card.
@@ -60,8 +61,27 @@ const TOOLS = [
     type: "function",
     function: {
       name: "get_financial_summary",
-      description: "Busca o resumo financeiro completo: contas, investimentos, empréstimos e transações recentes.",
+      description: "Busca o resumo financeiro completo: saldos das contas, investimentos e empréstimos.",
       parameters: { type: "object", properties: {}, required: [], additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_transactions",
+      description: "Busca e lista transações específicas do banco de dados do usuário (ex: filtrar por data, banco, etc.). USE ESTA FERRAMENTA para não inventar (alucinar) dados quando o usuário solicitar detalhes de transações.",
+      parameters: {
+        type: "object",
+        properties: {
+          start_date: { type: "string", description: "ISO date" },
+          end_date: { type: "string", description: "ISO date" },
+          bank_id: { type: "string", description: "Filtra por UUID da conta bancária" },
+          card_id_is_null: { type: "boolean", description: "Se true, traz apenas transações que NÃO estão atreladas a um cartão de crédito" },
+          query: { type: "string", description: "Busca pelo nome da transação" }
+        },
+        required: [],
+        additionalProperties: false,
+      },
     },
   },
   {
@@ -203,7 +223,8 @@ serve(async (req) => {
     }
 
     // Build context injection
-    let contextBlock = "";
+    const currentDate = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    let contextBlock = `\n\n--- INFORMAÇÕES DO SISTEMA ---\nData Atual (Hoje): ${currentDate}\n--- FIM INFORMAÇÕES ---`;
 
     // Inject dataMap (real UUIDs for CRUD)
     if (dataMap) {
