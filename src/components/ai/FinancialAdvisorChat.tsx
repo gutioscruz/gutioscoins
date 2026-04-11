@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Trash2, Sparkles, Loader2, Copy, Landmark, TrendingUp, Receipt, CreditCard, ArrowUpDown, Check, X, Plus, Maximize2, Minimize2, MessageSquare, Pencil } from "lucide-react";
+import { Send, Trash2, Sparkles, Loader2, Copy, Landmark, TrendingUp, Receipt, CreditCard, ArrowUpDown, Check, X, Plus, Maximize2, Minimize2, MessageSquare, Pencil, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -252,10 +252,9 @@ export const FinancialAdvisorChat = () => {
   const isMobile = useIsMobile();
 
   const {
-    messages, isLoading, isLoadingHistory, pendingAction,
-    sessions, activeSessionId,
     sendMessage, clearMessages, approveAction, cancelAction,
     createSession, switchSession, deleteSession, updateSessionTitle,
+    submitErrorReport,
   } = useFinancialAdvisor();
 
   const { transactions, categories, goals } = useFinance();
@@ -336,13 +335,15 @@ export const FinancialAdvisorChat = () => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
-  const handleExportChat = async () => {
-    if (messages.length === 0) { toast.info("Nenhuma mensagem."); return; }
-    const text = messages.map((m) => `[${m.role === "user" ? "Você" : "🎩"}]: ${m.content}`).join("\n\n");
-    try {
-      await navigator.clipboard.writeText(`📋 GutiosCoins — Alfred\n\n${text}`);
-      toast.success("Copiado!");
-    } catch { toast.error("Erro ao copiar."); }
+  const handleReportError = async () => {
+    const description = window.prompt("Descreva brevemente o erro ou inconsistência que você notou:");
+    if (description !== null) {
+      if (!description.trim()) {
+        toast.error("Por favor, informe uma descrição.");
+        return;
+      }
+      await submitErrorReport(description);
+    }
   };
 
   const showSidebar = (isExpanded || !isMobile) && sessions.length > 0;
@@ -364,6 +365,11 @@ export const FinancialAdvisorChat = () => {
           {messages.length > 0 && (
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={handleExportChat} title="Copiar">
               <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {messages.length > 0 && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-orange-500/10 hover:text-orange-500" onClick={handleReportError} title="Reportar Erro">
+              <AlertTriangle className="h-3.5 w-3.5" />
             </Button>
           )}
           {messages.length > 0 && (

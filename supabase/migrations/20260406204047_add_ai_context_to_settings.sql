@@ -1,0 +1,3 @@
+-- Add ai_context column to user_settings table
+ALTER TABLE user_settings
+ADD COLUMN IF NOT EXISTS ai_context TEXT;

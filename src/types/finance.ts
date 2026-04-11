@@ -155,6 +155,7 @@ export interface UserSettings {
   id: string;
   monthlySalary: number | null;
   salaryAutoCalculate: boolean;
+  aiContext?: string;
 }
 
 export interface BudgetArea {

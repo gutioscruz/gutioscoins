@@ -21,6 +21,7 @@ import Loans from "./pages/Loans";
 import Compromissos from "./pages/Compromissos";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 import { FinancialAdvisorChat } from "@/components/ai/FinancialAdvisorChat";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 
@@ -57,6 +58,7 @@ const App = () => (
                                 <Route path="/goals" element={<Goals />} />
                                 <Route path="/loans" element={<Loans />} />
                                 <Route path="/compromissos" element={<Compromissos />} />
+                                <Route path="/settings" element={<Settings />} />
                                 <Route path="*" element={<NotFound />} />
                               </Routes>
                              </main>

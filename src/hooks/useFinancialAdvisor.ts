@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { addMonths } from "date-fns";
+import { useUserSettings } from "./useUserSettings";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -37,6 +38,7 @@ interface FinancialContext {
   topExpenseCategories?: Array<{ name: string; amount: number }>;
   activeGoals?: Array<{ name: string; current: number; target: number }>;
   wishlistItems?: Array<{ name: string; price: number }>;
+  aiContext?: string;
 }
 
 export interface DataMap {
@@ -67,6 +69,7 @@ export function useFinancialAdvisor() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const { user } = useAuth();
+  const { settings } = useUserSettings();
   const queryClient = useQueryClient();
 
   // Load sessions
@@ -255,10 +258,11 @@ export function useFinancialAdvisor() {
 
   const sendMessage = useCallback(
     async (input: string, financialContext?: FinancialContext, dataMap?: DataMap) => {
+      const mergedContext = financialContext ? {...financialContext, aiContext: settings?.aiContext} : {aiContext: settings?.aiContext};
       const userMsg: ChatMessage = { role: "user", content: input };
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
-      setLastFinancialContext(financialContext);
+      setLastFinancialContext(mergedContext);
 
       // Auto-create session if none
       let sessionId = activeSessionId;
@@ -277,7 +281,7 @@ export function useFinancialAdvisor() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ messages: allMessages, financialContext, dataMap }),
+          body: JSON.stringify({ messages: allMessages, financialContext: mergedContext, dataMap }),
         });
 
         if (!resp.ok) {
@@ -347,7 +351,7 @@ export function useFinancialAdvisor() {
                 },
                 body: JSON.stringify({
                   messages: followUpMessages,
-                  financialContext,
+                  financialContext: mergedContext,
                   dataMap,
                   toolResults: [{ tool_call_id: call.id, result: toolResult }],
                 }),
@@ -380,7 +384,7 @@ export function useFinancialAdvisor() {
         setIsLoading(false);
       }
     },
-    [messages, user?.id, activeSessionId, handleStreamResponse, executeGetFinancialSummary, executeSearchTransactions, createSession]
+    [messages, user?.id, activeSessionId, handleStreamResponse, executeGetFinancialSummary, executeSearchTransactions, createSession, settings?.aiContext]
   );
 
   const approveAction = useCallback(async () => {
@@ -622,20 +626,34 @@ export function useFinancialAdvisor() {
     setPendingAction(null);
   }, [pendingAction, user?.id, activeSessionId]);
 
-  const clearMessages = useCallback(async () => {
-    setMessages([]);
-    setPendingAction(null);
-    if (user?.id && activeSessionId) {
-      await supabase.from("advisor_chat_history").delete().eq("user_id", user.id).eq("session_id", activeSessionId);
-    } else if (user?.id) {
-      await supabase.from("advisor_chat_history").delete().eq("user_id", user.id).is("session_id", null);
+  const submitErrorReport = useCallback(async (description: string) => {
+    if (!user?.id) return { success: false, error: "Not authenticated" };
+
+    try {
+      const { data, error } = await supabase.from("advisor_error_reports").insert({
+        user_id: user.id,
+        session_id: activeSessionId,
+        error_description: description,
+        chat_history: messages,
+        financial_context: lastFinancialContext || {},
+      } as any);
+
+      if (error) throw error;
+      
+      toast.success("Relatório de erro enviado com sucesso. Obrigado!");
+      return { success: true };
+    } catch (e: any) {
+      console.error("Error submitting report:", e);
+      toast.error("Falha ao enviar relatório: " + e.message);
+      return { success: false, error: e.message };
     }
-  }, [user?.id, activeSessionId]);
+  }, [user?.id, activeSessionId, messages, lastFinancialContext]);
 
   return {
     messages, isLoading, isLoadingHistory, pendingAction,
     sessions, activeSessionId,
     sendMessage, clearMessages, approveAction, cancelAction,
     createSession, switchSession, deleteSession, updateSessionTitle,
+    submitErrorReport,
   };
 }

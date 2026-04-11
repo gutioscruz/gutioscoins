@@ -27,22 +27,25 @@ export const useUserSettings = () => {
         id: data.id,
         monthlySalary: data.monthly_salary ? Number(data.monthly_salary) : null,
         salaryAutoCalculate: data.salary_auto_calculate,
+        aiContext: data.ai_context,
       };
     },
     enabled: !!user,
   });
 
   const upsertSettings = useMutation({
-    mutationFn: async (input: { monthlySalary: number | null; salaryAutoCalculate: boolean }) => {
+    mutationFn: async (input: { monthlySalary?: number | null; salaryAutoCalculate?: boolean; aiContext?: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
+
+      // Fetch current row first to merge (upsert replace whole row if omitted usually, but supabase merge objects)
+      const updates: any = { user_id: user.id };
+      if (input.monthlySalary !== undefined) updates.monthly_salary = input.monthlySalary;
+      if (input.salaryAutoCalculate !== undefined) updates.salary_auto_calculate = input.salaryAutoCalculate;
+      if (input.aiContext !== undefined) updates.ai_context = input.aiContext;
 
       const { data, error } = await supabase
         .from("user_settings")
-        .upsert({
-          user_id: user.id,
-          monthly_salary: input.monthlySalary,
-          salary_auto_calculate: input.salaryAutoCalculate,
-        }, {
+        .upsert(updates, {
           onConflict: "user_id",
         })
         .select()
@@ -68,11 +71,18 @@ export const useUserSettings = () => {
     });
   };
 
+  const updateAiContext = async (context: string) => {
+    await upsertSettings.mutateAsync({
+      aiContext: context,
+    });
+  };
+
   return {
     settings,
     isLoading,
     error,
     updateSalary,
+    updateAiContext,
     isUpdating: upsertSettings.isPending,
   };
 };

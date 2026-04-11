@@ -10,9 +10,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Settings as SettingsIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const UserMenu = ({ collapsed = false }: { collapsed?: boolean }) => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -65,6 +68,10 @@ export const UserMenu = ({ collapsed = false }: { collapsed?: boolean }) => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/settings')}>
+          <SettingsIcon className="mr-2 h-4 w-4" />
+          <span>Configurações</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={signOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>
