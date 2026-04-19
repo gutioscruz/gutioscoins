@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { CreditCard, Landmark, Calendar } from "lucide-react";
+import { CreditCard, Landmark, Calendar, CheckCircle2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -74,7 +74,8 @@ export const PayCommitmentDialog = ({
   const [bankId, setBankId] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [discount, setDiscount] = useState("");
-  const [createTransaction, setCreateTransaction] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"simple" | "transaction">("simple");
+  const createTransaction = paymentMode === "transaction";
 
   // Build list of payable items from installmentGroup or loan
   const payableItems = useMemo<PayableItem[]>(() => {
@@ -149,7 +150,7 @@ export const PayCommitmentDialog = ({
       setBankId("");
       setPaymentDate(new Date().toISOString().split("T")[0]);
       setDiscount("");
-      setCreateTransaction(false);
+      setPaymentMode("simple");
     }
     onOpenChange(isOpen);
   };
@@ -236,27 +237,48 @@ export const PayCommitmentDialog = ({
             </ScrollArea>
           </div>
 
-          {/* Create Transaction Checkbox */}
-          <div className="flex items-center space-x-2 p-3 border rounded-lg">
-            <Checkbox
-              id="createTransaction"
-              checked={createTransaction}
-              onCheckedChange={(checked) => setCreateTransaction(checked === true)}
-            />
-            <div className="grid gap-1.5 leading-none">
-              <label
-                htmlFor="createTransaction"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          {/* Payment Mode Toggle */}
+          <div className="space-y-2">
+            <Label>Modo de pagamento</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMode("simple")}
+                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${
+                  paymentMode === "simple"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                    : "border-border bg-muted/30 hover:bg-muted/50"
+                }`}
               >
-                Registrar transação financeira
-              </label>
-              <p className="text-xs text-muted-foreground">
-                Cria um débito na conta selecionada. Desmarque para apenas marcar como pago.
-              </p>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-income" />
+                  <span className="text-sm font-semibold">Marcar como pago</span>
+                </div>
+                <span className="text-[11px] text-muted-foreground leading-tight">
+                  Só atualiza o status. Não mexe em saldo.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMode("transaction")}
+                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${
+                  paymentMode === "transaction"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                    : "border-border bg-muted/30 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold">Débito em conta</span>
+                </div>
+                <span className="text-[11px] text-muted-foreground leading-tight">
+                  Cria transação e debita do banco.
+                </span>
+              </button>
             </div>
           </div>
 
-          {/* Bank Selection */}
+          {/* Bank Selection (only for transaction mode) */}
           {createTransaction && (
             <div className="space-y-2">
               <Label htmlFor="bank">Débito de qual conta?</Label>
