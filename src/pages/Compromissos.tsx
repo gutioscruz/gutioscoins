@@ -135,20 +135,14 @@ const Compromissos = () => {
 
   const confirmDeleteLoan = () => {
     if (!selectedCommitment || selectedCommitment.kind !== "loan") return;
-    deleteLoan.mutate(selectedCommitment.originalId);
+    deleteLoan(selectedCommitment.originalId);
     setDeleteLoanDialogOpen(false);
     setSelectedCommitment(null);
   };
 
   const handleSaveLoan = (id: string, updates: any) => {
-    updateLoan.mutate(
-      { id, loan: updates },
-      {
-        onSuccess: () => {
-          setEditLoanDialogOpen(false);
-        },
-      }
-    );
+    updateLoan({ id, loan: updates });
+    setEditLoanDialogOpen(false);
   };
 
   const handleConfirmPayment = async (data: {
