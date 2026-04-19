@@ -276,9 +276,36 @@ const Compromissos = () => {
                 Detalhes
               </Button>
               {commitment.kind === "loan" && (
-                <div className="ml-auto">
-                  <SniperButton loan={loans.find(l => l.id === commitment.originalId)} />
-                </div>
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-xl h-9 w-9 p-0"
+                        aria-label="Mais ações"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl">
+                      <DropdownMenuItem onClick={() => handleEditLoan(commitment)} className="rounded-lg cursor-pointer">
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteLoan(commitment)}
+                        className="rounded-lg cursor-pointer text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="ml-auto">
+                    <SniperButton loan={loans.find(l => l.id === commitment.originalId)} />
+                  </div>
+                </>
               )}
             </div>
           </div>
