@@ -1,136 +1,60 @@
 
 
-# Plano: Agente Autônomo com CRUD Completo (incluindo Transações)
+## Análise
 
-## Visao Geral
+O `QuickEntryDialog` atual tem 3 problemas:
+1. **Não suporta cartão** — não há coluna para selecionar `cardId`. Quando o usuário registra uma despesa em cartão de crédito, o sistema não associa, então o saldo do cartão não é debitado e a fatura não é gerada.
+2. **Mobile inviável** — usa `grid-cols-[100px_90px_1fr_100px_140px_140px_40px]` (≈710px fixos), o que estoura horizontalmente em telas <768px. Não há layout alternativo.
+3. **Bulk insert ignora `card_id`** — `addBulkSimpleTransactions` no `useTransactions.ts` não aceita nem grava o campo `card_id`.
 
-Transformar o consultor financeiro em um agente autônomo com tool-calling capaz de ler e modificar dados de **Patrimonio** (Contas/Investimentos), **Compromissos** (Emprestimos/Parcelas) e **Transacoes** — sempre com confirmacao explicita do usuario (Human-in-the-Loop).
+## Plano de Refatoração
 
----
+### 1. `useTransactions.ts` — suportar `cardId` no bulk
+- Adicionar campo opcional `cardId?: string` ao tipo de input de `addBulkSimpleTransactions`.
+- Incluir `card_id: t.cardId ?? null` no payload do `insert`. Os triggers SQL existentes já sincronizam `cards.used_amount` e `card_statements` automaticamente.
 
-## Arquitetura
+### 2. `QuickEntryDialog.tsx` — refatoração completa
 
-```text
-Usuario digita mensagem
-        |
-        v
-Edge Function (financial-advisor)
-  - System Prompt "Arquiteto Financeiro"
-  - tools[] com 6 ferramentas
-  - Retorna texto (streaming) OU tool_call (JSON)
-        |
-        v
-useFinancialAdvisor.ts
-  - Detecta tool_call na resposta
-  - Seta pendingAction (pausa execucao)
-  - Se read-only (get_financial_summary): auto-aprova
-        |
-        v
-FinancialAdvisorChat.tsx
-  - Renderiza PendingActionCard dinamico
-  - Icones contextuais por modulo
-  - Botoes Aprovar / Cancelar
-        |
-  [Aprovar] -> Executa CRUD via Supabase client
-            -> Invalida queries TanStack
-            -> Envia resultado de volta ao AI
-```
+**Modelo de dados**
+- Adicionar `cardId: string` ao `QuickEntryRow`.
+- Aceitar `banks: Bank[]` (já vem com `cards`) — reaproveitar para extrair lista de cartões por banco.
 
----
+**Lógica de seleção banco/cartão**
+- Quando o usuário seleciona um banco, abrir um campo "Cartão (opcional)" mostrando apenas os cartões daquele banco. Se o banco não tem cartões, o campo fica desabilitado.
+- Tipo "Receita" → cartão automaticamente limpo e desabilitado (faz sentido apenas para despesas).
+- Ao trocar tipo/banco, resetar `cardId`.
 
-## 6 Ferramentas (Tools)
+**Layout responsivo (dual-mode)**
 
-| Tool | Acao | Tabela |
-|------|------|--------|
-| `get_financial_summary` | Leitura completa (auto-aprovada) | banks, investments, loans, transactions |
-| `manage_bank_account` | add / update / delete | banks |
-| `manage_investment` | add / update / delete | investments |
-| `manage_loan` | create / update (incl. Consignado CLT) | loans, loan_payments |
-| `manage_installment` | add / edit parcelas | transactions (is_installment=true) |
-| `manage_transaction` | add / update / delete transacoes | transactions |
+Detectar mobile via `useIsMobile()`:
 
-### Tool `manage_transaction` — Detalhes
+- **Desktop (≥768px):** manter grid-table compacto, **adicionando** a coluna "Cartão". Novo grid: `[90px_80px_1fr_90px_130px_130px_130px_36px]` (Data | Tipo | Descrição | Valor | Categoria | Banco | Cartão | Excluir). Reduz larguras para caber sem rolagem horizontal em desktops ≥1024px.
 
-Parametros:
-- `action`: "add" | "update" | "delete"
-- `transaction_id` (para update/delete)
-- `description`, `amount`, `type` ("income"/"expense"), `date`
-- `bank_id`, `category_id`, `subcategory` (opcional)
-- `card_id` (opcional, para despesas em cartao)
+- **Mobile (<768px):** abandonar grid-table e renderizar cada linha como **card empilhado** (`rounded-2xl bg-card/40 p-4 space-y-3`) com:
+  - Header: "Linha 1" + botão excluir
+  - Grid 2 colunas: Data + Tipo
+  - Descrição (full width)
+  - Grid 2 colunas: Valor + Categoria
+  - Grid 2 colunas: Banco + Cartão
+  - `inputMode="decimal"` no campo valor, fonte ≥16px (para evitar zoom no iOS).
 
-Exemplos de uso pelo AI:
-- "Vou registrar essa despesa de R$ 85 no Supermercado para voce"
-- "Vou corrigir o valor dessa transacao de R$ 100 para R$ 120"
-- "Vou remover essa transacao duplicada"
+**Outros ajustes mobile/UX**
+- `DialogContent`: `w-[95vw] max-w-5xl max-h-[95vh] sm:max-h-[90vh] p-4 sm:p-6 rounded-3xl`.
+- Iniciar com **3 linhas** em mobile, 5 em desktop (menos scroll inicial).
+- Botões do footer empilhados em mobile (`flex-col sm:flex-row`), full-width.
+- ScrollArea com `max-h-[60vh] sm:max-h-[55vh]`.
+- Trigger button: ícone-only em telas muito pequenas (`<span className="hidden xs:inline">Entrada Rápida</span>`).
 
----
+### 3. `Transactions.tsx` — repassar `cardId`
+- Adicionar `cardId?: string` ao tipo do `handleQuickBatchAdd` e propagá-lo para `addBulkSimpleTransactions`.
 
-## Etapas de Implementacao
+## Arquivos Alterados
 
-### 1. Edge Function — Tools + Prompt Atualizado
-
-**Arquivo:** `supabase/functions/financial-advisor/index.ts`
-
-- Adicionar array `tools` com 6 definicoes (JSON Schema para cada ferramenta)
-- `manage_transaction` com schema: action (enum), transaction_id, description, amount, type, date, bank_id, category_id, subcategory, card_id
-- Atualizar system prompt para persona "Arquiteto Financeiro" com regra: "NUNCA execute sem apresentar plano com O QUE, COMO e QUAL IMPACTO"
-- Detectar `finish_reason: "tool_calls"` na resposta do AI gateway
-- Se tool_call: retornar JSON `{type: "tool_call", calls: [...]}` (nao streaming)
-- Se texto: retornar streaming (comportamento atual)
-
-### 2. Hook — Deteccao e Execucao de Tool Calls
-
-**Arquivo:** `src/hooks/useFinancialAdvisor.ts`
-
-- Novo tipo `PendingToolCall { toolName, arguments, planText }`
-- Novo state `pendingAction: PendingToolCall | null`
-- No `sendMessage`: detectar resposta JSON com `type: "tool_call"` vs SSE streaming
-- Para tool_calls: extrair plan text + argumentos, setar `pendingAction`
-- `get_financial_summary`: auto-aprovar (read-only), buscar dados e enviar como tool response
-- `approveAction()`:
-  - `manage_bank_account` → `supabase.from('banks').insert/update/delete`
-  - `manage_investment` → `supabase.from('investments').insert/update/delete`
-  - `manage_loan` → `supabase.from('loans').insert/update/delete` + gerar loan_payments
-  - `manage_installment` → `supabase.from('transactions').insert/update` com campos de parcela
-  - `manage_transaction` → `supabase.from('transactions').insert/update/delete`
-- Apos execucao: invalidar queries TanStack (`banks`, `investments`, `loans`, `installments`, `transactions`)
-- Enviar resultado de volta ao AI para resumo final
-- `cancelAction()`: limpar pendingAction, notificar AI
-
-### 3. UI — Card de Acao Pendente Dinamico
-
-**Arquivo:** `src/components/ai/FinancialAdvisorChat.tsx`
-
-- Componente `PendingActionCard` com rendering condicional:
-  - **Patrimonio** (bank/investment): icones Landmark/TrendingUp, valores atuais vs propostos
-  - **Compromissos** (loan/installment): icones Receipt/CreditCard, barra de progresso da divida
-  - **Transacoes** (transaction): icone ArrowUpDown/Wallet, descricao, valor, banco/categoria
-- Estilo glassmorphism: `rounded-3xl bg-card/40 backdrop-blur-md border border-purple-500/20 p-4`
-- Botoes "Aprovar" (verde) e "Cancelar" (muted)
-- Exibe o `planText` do AI como explicacao acima dos botoes
-
-### 4. System Prompt Completo
-
-Regras chave no prompt:
-- Autoridade sobre transacoes, saldos, investimentos, emprestimos e parcelas
-- Obrigatorio: texto explicativo antes de qualquer tool_call (O QUE / COMO / IMPACTO)
-- Contexto do atleta (dieta = prioridade, nunca criticar)
-- Transicao SP (R$ 6.800 meta)
-- Sugerir amortizacoes inteligentes quando houver saldo sobrando
-- Regra das 48h para compras impulsivas
-- NUNCA executar sem aprovacao
-
----
-
-## Arquivos Modificados
-
-| Arquivo | Acao |
+| Arquivo | Mudança |
 |---|---|
-| `supabase/functions/financial-advisor/index.ts` | Reescrever: tools[], dual response mode, prompt arquiteto |
-| `src/hooks/useFinancialAdvisor.ts` | Expandir: deteccao tool_call, approve/cancel, CRUD para 6 ferramentas |
-| `src/components/ai/FinancialAdvisorChat.tsx` | Adicionar: PendingActionCard dinamico com contexto visual por modulo |
+| `src/components/finance/QuickEntryDialog.tsx` | Reescrever: adicionar coluna cartão, layout dual desktop/mobile, melhorias UX mobile |
+| `src/hooks/useTransactions.ts` | Adicionar `cardId` ao bulk insert |
+| `src/pages/Transactions.tsx` | Propagar `cardId` no handler `handleQuickBatchAdd` |
 
-## Sem Alteracoes de Banco
-
-Nenhuma migration necessaria — todas as operacoes usam tabelas existentes (`banks`, `investments`, `loans`, `loan_payments`, `transactions`).
+Sem alterações de banco — `transactions.card_id` já existe e os triggers de sincronização de cartão já estão ativos.
 
