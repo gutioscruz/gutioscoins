@@ -532,6 +532,24 @@ const Compromissos = () => {
           installmentGroup={getInstallmentGroup(selectedCommitment)}
           loan={getLoan(selectedCommitment)}
         />
+
+        <EditLoanDialog
+          open={editLoanDialogOpen}
+          onOpenChange={setEditLoanDialogOpen}
+          loan={getLoan(selectedCommitment) || null}
+          banks={banks}
+          categories={categories}
+          onSave={handleSaveLoan}
+        />
+
+        <ConfirmDialog
+          open={deleteLoanDialogOpen}
+          onOpenChange={setDeleteLoanDialogOpen}
+          title="Excluir empréstimo?"
+          description={`Esta ação removerá "${selectedCommitment?.title}" e todas as parcelas associadas. Não pode ser desfeito.`}
+          onConfirm={confirmDeleteLoan}
+          confirmText="Excluir"
+        />
       </main>
     </div>
   );
