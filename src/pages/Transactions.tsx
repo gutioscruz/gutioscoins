@@ -101,17 +101,18 @@ const Transactions = () => {
       type: TransactionType;
       categoryId: string;
       bankId: string;
+      cardId?: string;
       date: Date;
       isInstallment: boolean;
     }>
   ) => {
-    // We only support simple transactions via bulk for now (QuickEntry usually sends isInstallment: false anyway)
     const simpleTxs = txs.map(t => ({
       description: t.description,
       amount: t.amount,
       type: t.type as 'income' | 'expense',
       categoryId: t.categoryId,
       bankId: t.bankId,
+      cardId: t.cardId,
       date: t.date
     }));
     

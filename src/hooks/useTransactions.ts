@@ -262,6 +262,7 @@ export const useTransactions = (filters?: TransactionFilters) => {
       type: 'income' | 'expense';
       categoryId: string;
       bankId: string;
+      cardId?: string;
       date: Date;
     }>) => {
       if (!user) throw new Error('User not authenticated');
@@ -273,6 +274,7 @@ export const useTransactions = (filters?: TransactionFilters) => {
         type: t.type,
         category_id: t.categoryId,
         bank_id: t.bankId,
+        card_id: t.cardId ?? null,
         date: t.date.toISOString(),
       }));
 
