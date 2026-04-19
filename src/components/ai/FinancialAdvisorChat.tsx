@@ -252,10 +252,21 @@ export const FinancialAdvisorChat = () => {
   const isMobile = useIsMobile();
 
   const {
+    messages, isLoading, isLoadingHistory, pendingAction,
+    sessions, activeSessionId,
     sendMessage, clearMessages, approveAction, cancelAction,
     createSession, switchSession, deleteSession, updateSessionTitle,
     submitErrorReport,
   } = useFinancialAdvisor();
+
+  const handleExportChat = () => {
+    const text = messages
+      .filter((m) => m.role !== "tool")
+      .map((m) => `${m.role === "user" ? "Você" : "Alfred"}: ${m.content}`)
+      .join("\n\n");
+    navigator.clipboard.writeText(text);
+    toast.success("Conversa copiada!");
+  };
 
   const { transactions, categories, goals } = useFinance();
   const { summary: commitmentSummary } = useCommitments();

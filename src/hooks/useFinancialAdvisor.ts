@@ -630,7 +630,7 @@ export function useFinancialAdvisor() {
     if (!user?.id) return { success: false, error: "Not authenticated" };
 
     try {
-      const { data, error } = await supabase.from("advisor_error_reports").insert({
+      const { data, error } = await (supabase as any).from("advisor_error_reports").insert({
         user_id: user.id,
         session_id: activeSessionId,
         error_description: description,
@@ -648,6 +648,22 @@ export function useFinancialAdvisor() {
       return { success: false, error: e.message };
     }
   }, [user?.id, activeSessionId, messages, lastFinancialContext]);
+
+  const clearMessages = useCallback(async () => {
+    if (!user?.id || !activeSessionId) {
+      setMessages([]);
+      return;
+    }
+    try {
+      await supabase.from("advisor_chat_history").delete().eq("session_id", activeSessionId);
+      setMessages([]);
+      setPendingAction(null);
+      toast.success("Conversa limpa.");
+    } catch (e: any) {
+      console.error("Error clearing messages:", e);
+      toast.error("Falha ao limpar conversa.");
+    }
+  }, [user?.id, activeSessionId]);
 
   return {
     messages, isLoading, isLoadingHistory, pendingAction,
