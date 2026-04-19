@@ -630,7 +630,7 @@ export function useFinancialAdvisor() {
     if (!user?.id) return { success: false, error: "Not authenticated" };
 
     try {
-      const { data, error } = await supabase.from("advisor_error_reports").insert({
+      const { data, error } = await (supabase as any).from("advisor_error_reports").insert({
         user_id: user.id,
         session_id: activeSessionId,
         error_description: description,
