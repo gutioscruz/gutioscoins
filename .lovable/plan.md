@@ -2,59 +2,70 @@
 
 ## Análise
 
-O `QuickEntryDialog` atual tem 3 problemas:
-1. **Não suporta cartão** — não há coluna para selecionar `cardId`. Quando o usuário registra uma despesa em cartão de crédito, o sistema não associa, então o saldo do cartão não é debitado e a fatura não é gerada.
-2. **Mobile inviável** — usa `grid-cols-[100px_90px_1fr_100px_140px_140px_40px]` (≈710px fixos), o que estoura horizontalmente em telas <768px. Não há layout alternativo.
-3. **Bulk insert ignora `card_id`** — `addBulkSimpleTransactions` no `useTransactions.ts` não aceita nem grava o campo `card_id`.
+**Problemas identificados na página `/compromissos`:**
+
+1. **Empréstimos sem CRUD** — os cards na aba "Empréstimos" só têm os botões **Pagar**, **Detalhes** e **Sniper (antecipação)**. Não há **Editar** nem **Excluir**, embora as mutations `updateLoan` e `deleteLoan` já existam em `useLoans.ts` (linhas 151-197).
+
+2. **Pagamento exige banco/transação obrigatórios** — no `PayCommitmentDialog`, o checkbox "Registrar transação financeira" existe mas inicia desmarcado e o fluxo é confuso. O usuário quer um botão **explícito de "Apenas marcar como pago"** (atualizar status sem mexer em saldo de conta), separado do fluxo de "pagar com débito em conta".
+
+3. **Não existe `EditLoanDialog`** — a única edição hoje está em `/emprestimos` (página antiga `Loans.tsx`), forçando o usuário a sair da War Room.
+
+---
 
 ## Plano de Refatoração
 
-### 1. `useTransactions.ts` — suportar `cardId` no bulk
-- Adicionar campo opcional `cardId?: string` ao tipo de input de `addBulkSimpleTransactions`.
-- Incluir `card_id: t.cardId ?? null` no payload do `insert`. Os triggers SQL existentes já sincronizam `cards.used_amount` e `card_statements` automaticamente.
+### 1. Criar `EditLoanDialog.tsx` (novo)
 
-### 2. `QuickEntryDialog.tsx` — refatoração completa
+`src/components/compromissos/EditLoanDialog.tsx`
 
-**Modelo de dados**
-- Adicionar `cardId: string` ao `QuickEntryRow`.
-- Aceitar `banks: Bank[]` (já vem com `cards`) — reaproveitar para extrair lista de cartões por banco.
+Campos editáveis (apenas metadados — não recalcula parcelas):
+- Nome
+- Descrição
+- Banco vinculado
+- Categoria / Subcategoria
+- Tipo de empréstimo (`pessoal` | `consignado` | `consignado_clt` | `fatura_parcelada`)
+- Status (`active` | `paid` | `overdue`)
 
-**Lógica de seleção banco/cartão**
-- Quando o usuário seleciona um banco, abrir um campo "Cartão (opcional)" mostrando apenas os cartões daquele banco. Se o banco não tem cartões, o campo fica desabilitado.
-- Tipo "Receita" → cartão automaticamente limpo e desabilitado (faz sentido apenas para despesas).
-- Ao trocar tipo/banco, resetar `cardId`.
+**Bloqueado para edição** (com aviso): principal, taxa, número de parcelas, frequência. Motivo: alterar isso quebraria a Tabela Price já gerada.
 
-**Layout responsivo (dual-mode)**
+Usa `updateLoan` do `useLoans`. Estilo glassmorphism (`rounded-3xl`, `bg-card/40`).
 
-Detectar mobile via `useIsMobile()`:
+### 2. Refatorar `PayCommitmentDialog.tsx`
 
-- **Desktop (≥768px):** manter grid-table compacto, **adicionando** a coluna "Cartão". Novo grid: `[90px_80px_1fr_90px_130px_130px_130px_36px]` (Data | Tipo | Descrição | Valor | Categoria | Banco | Cartão | Excluir). Reduz larguras para caber sem rolagem horizontal em desktops ≥1024px.
+**Mudança no fluxo:**
+- Substituir o checkbox "Registrar transação financeira" por um **toggle de modo** com 2 opções claras no topo:
+  - 🏦 **"Pagar com débito em conta"** → exige banco, cria transação (atualiza saldo)
+  - ✅ **"Apenas marcar como pago"** (default) → não exige banco, **só atualiza o status** das parcelas. Útil para "atualizar sistema defasado" sem mexer em saldo atual.
+- Quando modo = "marcar como pago", esconder completamente o seletor de banco e o aviso.
+- Botão final muda label conforme o modo: `"Confirmar Pagamento"` vs `"Marcar como Pago"`.
+- Manter seleção de parcelas, data, desconto.
 
-- **Mobile (<768px):** abandonar grid-table e renderizar cada linha como **card empilhado** (`rounded-2xl bg-card/40 p-4 space-y-3`) com:
-  - Header: "Linha 1" + botão excluir
-  - Grid 2 colunas: Data + Tipo
-  - Descrição (full width)
-  - Grid 2 colunas: Valor + Categoria
-  - Grid 2 colunas: Banco + Cartão
-  - `inputMode="decimal"` no campo valor, fonte ≥16px (para evitar zoom no iOS).
+**Lógica em `Compromissos.tsx`** (`handleConfirmPayment`): já suporta `createTransaction: boolean` — basta o dialog passar o valor correto. Ajustar a chamada para `markInstallmentsPaid` (já existe em `useInstallments`) e `payMultipleLoanInstallments` com `createTransaction: false`.
 
-**Outros ajustes mobile/UX**
-- `DialogContent`: `w-[95vw] max-w-5xl max-h-[95vh] sm:max-h-[90vh] p-4 sm:p-6 rounded-3xl`.
-- Iniciar com **3 linhas** em mobile, 5 em desktop (menos scroll inicial).
-- Botões do footer empilhados em mobile (`flex-col sm:flex-row`), full-width.
-- ScrollArea com `max-h-[60vh] sm:max-h-[55vh]`.
-- Trigger button: ícone-only em telas muito pequenas (`<span className="hidden xs:inline">Entrada Rápida</span>`).
+### 3. Adicionar ações de CRUD ao `CommitmentCard` (em `Compromissos.tsx`)
 
-### 3. `Transactions.tsx` — repassar `cardId`
-- Adicionar `cardId?: string` ao tipo do `handleQuickBatchAdd` e propagá-lo para `addBulkSimpleTransactions`.
+Apenas para `commitment.kind === "loan"`, adicionar dropdown menu (`MoreVertical` ícone, lucide) no canto superior direito do card com:
+- ✏️ **Editar** → abre `EditLoanDialog`
+- 🗑️ **Excluir** → abre `ConfirmDialog` (já existe em `src/components/ConfirmDialog.tsx`) → chama `deleteLoan.mutate(originalId)`
 
-## Arquivos Alterados
+Manter o `SniperButton` na barra inferior.
 
-| Arquivo | Mudança |
+### 4. Wire-up em `Compromissos.tsx`
+
+- Importar `useLoans` (já importado), expor `updateLoan` e `deleteLoan`
+- Importar `ConfirmDialog` e novo `EditLoanDialog`
+- Estados: `editLoanDialogOpen`, `deleteLoanDialogOpen`, `selectedLoan`
+- Handlers: `handleEditLoan(commitment)`, `handleDeleteLoan(commitment)`, `confirmDeleteLoan()`
+
+---
+
+## Arquivos Modificados
+
+| Arquivo | Ação |
 |---|---|
-| `src/components/finance/QuickEntryDialog.tsx` | Reescrever: adicionar coluna cartão, layout dual desktop/mobile, melhorias UX mobile |
-| `src/hooks/useTransactions.ts` | Adicionar `cardId` ao bulk insert |
-| `src/pages/Transactions.tsx` | Propagar `cardId` no handler `handleQuickBatchAdd` |
+| `src/components/compromissos/EditLoanDialog.tsx` | **Novo** — dialog de edição de metadados do empréstimo |
+| `src/components/compromissos/PayCommitmentDialog.tsx` | Refatorar: toggle "Pagar com débito" vs "Apenas marcar como pago" no topo, esconder banco no modo simples |
+| `src/pages/Compromissos.tsx` | Adicionar dropdown CRUD nos cards de empréstimo, wire-up de edit/delete dialogs |
 
-Sem alterações de banco — `transactions.card_id` já existe e os triggers de sincronização de cartão já estão ativos.
+**Sem alterações de banco** — `updateLoan` e `deleteLoan` já existem e a tabela `loans` tem CASCADE em `loan_payments` via RLS.
 
