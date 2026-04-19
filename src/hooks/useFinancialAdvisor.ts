@@ -649,6 +649,22 @@ export function useFinancialAdvisor() {
     }
   }, [user?.id, activeSessionId, messages, lastFinancialContext]);
 
+  const clearMessages = useCallback(async () => {
+    if (!user?.id || !activeSessionId) {
+      setMessages([]);
+      return;
+    }
+    try {
+      await supabase.from("advisor_chat_history").delete().eq("session_id", activeSessionId);
+      setMessages([]);
+      setPendingAction(null);
+      toast.success("Conversa limpa.");
+    } catch (e: any) {
+      console.error("Error clearing messages:", e);
+      toast.error("Falha ao limpar conversa.");
+    }
+  }, [user?.id, activeSessionId]);
+
   return {
     messages, isLoading, isLoadingHistory, pendingAction,
     sessions, activeSessionId,
