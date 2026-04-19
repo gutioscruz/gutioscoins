@@ -27,7 +27,7 @@ export const useUserSettings = () => {
         id: data.id,
         monthlySalary: data.monthly_salary ? Number(data.monthly_salary) : null,
         salaryAutoCalculate: data.salary_auto_calculate,
-        aiContext: data.ai_context,
+        aiContext: (data as any).ai_context,
       };
     },
     enabled: !!user,
