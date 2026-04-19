@@ -9,19 +9,31 @@ import {
   TrendingDown,
   DollarSign,
   Eye,
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  MoreVertical,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PremiumEmptyState } from "@/components/ui/PremiumEmptyState";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useCommitments, Commitment } from "@/hooks/useCommitments";
 import { useInstallments } from "@/hooks/useInstallments";
 import { useLoans } from "@/hooks/useLoans";
 import { useBanks } from "@/hooks/useBanks";
+import { useCategories } from "@/hooks/useCategories";
 import { PayCommitmentDialog } from "@/components/compromissos/PayCommitmentDialog";
 import { CommitmentDetailsDialog } from "@/components/compromissos/CommitmentDetailsDialog";
+import { EditLoanDialog } from "@/components/compromissos/EditLoanDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SniperButton } from "@/components/compromissos/SniperButton";
 import { toast } from "sonner";
 import { 
@@ -46,14 +58,17 @@ const Compromissos = () => {
 
   const useInstallmentsHook = useInstallments();
   const { installmentGroups } = useInstallmentsHook;
-  const { loans } = useLoans();
+  const { loans, updateLoan, deleteLoan } = useLoans();
   const { banks } = useBanks();
+  const { categories } = useCategories();
 
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
 
   // Dialog states
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [editLoanDialogOpen, setEditLoanDialogOpen] = useState(false);
+  const [deleteLoanDialogOpen, setDeleteLoanDialogOpen] = useState(false);
   const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -106,6 +121,34 @@ const Compromissos = () => {
   const handleDetails = (commitment: Commitment) => {
     setSelectedCommitment(commitment);
     setDetailsDialogOpen(true);
+  };
+
+  const handleEditLoan = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setEditLoanDialogOpen(true);
+  };
+
+  const handleDeleteLoan = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setDeleteLoanDialogOpen(true);
+  };
+
+  const confirmDeleteLoan = () => {
+    if (!selectedCommitment || selectedCommitment.kind !== "loan") return;
+    deleteLoan.mutate(selectedCommitment.originalId);
+    setDeleteLoanDialogOpen(false);
+    setSelectedCommitment(null);
+  };
+
+  const handleSaveLoan = (id: string, updates: any) => {
+    updateLoan.mutate(
+      { id, loan: updates },
+      {
+        onSuccess: () => {
+          setEditLoanDialogOpen(false);
+        },
+      }
+    );
   };
 
   const handleConfirmPayment = async (data: {
