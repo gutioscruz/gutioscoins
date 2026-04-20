@@ -12,7 +12,11 @@ import {
   LineChart as LineChartIcon,
   MoreVertical,
   Pencil,
-  Trash2
+  Trash2,
+  Plus,
+  ClipboardCheck,
+  Hash,
+  PiggyBank,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,12 +37,21 @@ import { useCategories } from "@/hooks/useCategories";
 import { PayCommitmentDialog } from "@/components/compromissos/PayCommitmentDialog";
 import { CommitmentDetailsDialog } from "@/components/compromissos/CommitmentDetailsDialog";
 import { EditLoanDialog } from "@/components/compromissos/EditLoanDialog";
+import { AddLoanDialog } from "@/components/compromissos/AddLoanDialog";
+import { BulkMarkPaidDialog } from "@/components/compromissos/BulkMarkPaidDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SniperButton } from "@/components/compromissos/SniperButton";
 import { toast } from "sonner";
+import { getCategoryColor } from "@/lib/categoryColors";
 import { 
   Area,
   AreaChart,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
   XAxis, 
   YAxis, 
   CartesianGrid, 
