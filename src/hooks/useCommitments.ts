@@ -191,6 +191,15 @@ export const useCommitments = () => {
     const thisMonthAmount = monthlyProjections[0]?.totalAmount || 0;
     const nextMonthAmount = monthlyProjections[1]?.totalAmount || 0;
 
+    const installmentsRemainingAmount = activeCommitments
+      .filter(c => c.kind === 'installment')
+      .reduce((sum, c) => sum + c.remainingAmount, 0);
+    const loansRemainingAmount = activeCommitments
+      .filter(c => c.kind === 'loan')
+      .reduce((sum, c) => sum + c.remainingAmount, 0);
+    const thisMonthInstallments = monthlyProjections[0]?.installmentsAmount || 0;
+    const thisMonthLoans = monthlyProjections[0]?.loansAmount || 0;
+
     return {
       totalActive,
       totalRemainingAmount,
@@ -198,6 +207,10 @@ export const useCommitments = () => {
       nextMonthAmount,
       installmentsCount: activeCommitments.filter(c => c.kind === 'installment').length,
       loansCount: activeCommitments.filter(c => c.kind === 'loan').length,
+      installmentsRemainingAmount,
+      loansRemainingAmount,
+      thisMonthInstallments,
+      thisMonthLoans,
     };
   }, [activeCommitments, monthlyProjections]);
 
