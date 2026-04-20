@@ -71,7 +71,7 @@ const Compromissos = () => {
 
   const useInstallmentsHook = useInstallments();
   const { installmentGroups } = useInstallmentsHook;
-  const { loans, updateLoan, deleteLoan, addLoanAsync, bulkMarkPaid } = useLoans();
+  const { loans, updateLoan, deleteLoan, addLoanAsync, bulkMarkPaid, bulkUpdateDueDates } = useLoans();
   const { banks } = useBanks();
   const { categories } = useCategories();
 
@@ -193,6 +193,13 @@ const Compromissos = () => {
     payments: Array<{ id: string; paid: boolean; paidDate: Date | null }>;
   }) => {
     bulkMarkPaid(data);
+    setBulkMarkPaidDialogOpen(false);
+  };
+
+  const confirmBulkUpdateDueDates = (data: {
+    payments: Array<{ id: string; dueDate: Date }>;
+  }) => {
+    bulkUpdateDueDates(data);
     setBulkMarkPaidDialogOpen(false);
   };
 
@@ -711,6 +718,7 @@ const Compromissos = () => {
           onOpenChange={setBulkMarkPaidDialogOpen}
           loan={getLoan(selectedCommitment) || null}
           onConfirm={confirmBulkMarkPaid}
+          onUpdateDueDates={confirmBulkUpdateDueDates}
         />
       </main>
     </div>

@@ -562,6 +562,30 @@ export const useLoans = () => {
     },
   });
 
+  const bulkUpdateDueDates = useMutation({
+    mutationFn: async ({
+      payments,
+    }: {
+      payments: Array<{ id: string; dueDate: Date }>;
+    }) => {
+      for (const p of payments) {
+        const { error } = await supabase
+          .from('loan_payments')
+          .update({ due_date: p.dueDate.toISOString() })
+          .eq('id', p.id);
+        if (error) throw error;
+      }
+      return { updated: payments.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      toast.success(`${data.updated} data(s) de vencimento atualizada(s)!`);
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao atualizar datas: ${error.message}`);
+    },
+  });
+
   return {
     loans,
     isLoading,
@@ -573,6 +597,7 @@ export const useLoans = () => {
     payLoanInstallmentsAhead: payLoanInstallmentsAhead.mutate,
     payMultipleLoanInstallments: payMultipleLoanInstallments.mutate,
     bulkMarkPaid: bulkMarkPaid.mutate,
+    bulkUpdateDueDates: bulkUpdateDueDates.mutate,
     addLoanAsync: addLoan.mutateAsync,
   };
 };
