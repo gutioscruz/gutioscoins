@@ -479,7 +479,10 @@ const Compromissos = () => {
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                     />
                     <Tooltip 
-                      formatter={(value: number) => [formatCurrency(value), "Saldo Devedor"]}
+                      formatter={(value: number, name: string) => [
+                        formatCurrency(value),
+                        name === "parcelamentos" ? "Parcelamentos" : "Empréstimos",
+                      ]}
                       contentStyle={{ 
                         backgroundColor: 'rgba(0,0,0,0.8)',
                         backdropFilter: 'blur(10px)',
@@ -492,11 +495,27 @@ const Compromissos = () => {
                     />
                     <Area 
                       type="monotone" 
-                      dataKey="remainingDebt" 
-                      stroke="hsl(var(--destructive))" 
-                      strokeWidth={3}
+                      dataKey="emprestimos" 
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={2}
+                      stackId="1"
                       fillOpacity={1} 
                       fill="url(#colorDebt)" 
+                      name="emprestimos"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="parcelamentos" 
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      stackId="1"
+                      fillOpacity={0.2} 
+                      fill="hsl(var(--primary))" 
+                      name="parcelamentos"
+                    />
+                    <Legend
+                      formatter={(value) => value === "parcelamentos" ? "Parcelamentos" : "Dívidas c/ Juros"}
+                      wrapperStyle={{ fontSize: 12 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
