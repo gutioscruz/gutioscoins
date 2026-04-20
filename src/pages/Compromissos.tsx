@@ -398,22 +398,23 @@ const Compromissos = () => {
         </div>
 
         {/* Global KPIs */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {[
-            { label: "Mês Atual", value: summary.thisMonthAmount, color: "text-foreground" },
-            { label: "Próximo Mês", value: summary.nextMonthAmount, color: "text-muted-foreground" },
-            { label: "Saldo Devedor Restante", value: summary.totalRemainingAmount, color: "text-destructive" },
-            { label: "Dívidas Ativas", value: summary.totalActive, sub: `${summary.installmentsCount} cartões · ${summary.loansCount} empréstimos`, isNumber: true },
+            { label: "Parcelas este mês", value: summary.thisMonthInstallments, color: "text-primary" },
+            { label: "Dívidas este mês", value: summary.thisMonthLoans, color: "text-destructive" },
+            { label: "Total Parcelado", value: summary.installmentsRemainingAmount, color: "text-primary" },
+            { label: "Dívida c/ Juros", value: summary.loansRemainingAmount, color: "text-destructive" },
+            { label: "Parcelamentos", value: summary.installmentsCount, isNumber: true, color: "text-primary" },
+            { label: "Empréstimos", value: summary.loansCount, isNumber: true, color: "text-destructive" },
           ].map((card, idx) => (
             <div 
               key={card.label} 
-              className="group rounded-3xl bg-card/40 backdrop-blur-xl border-none ring-1 ring-white/5 shadow-lg p-6 flex flex-col justify-between"
+              className="group rounded-3xl bg-card/40 backdrop-blur-xl border-none ring-1 ring-white/5 shadow-lg p-4 md:p-5 flex flex-col justify-between"
             >
-              <p className="text-xs text-muted-foreground font-semibold tracking-wider uppercase mb-2">{card.label}</p>
-              <p className={`text-3xl font-bold tabular-nums tracking-tight ${card.color || ""}`}>
+              <p className="text-[10px] text-muted-foreground font-semibold tracking-wider uppercase mb-1">{card.label}</p>
+              <p className={`text-xl md:text-2xl font-bold tabular-nums tracking-tight ${card.color || ""}`}>
                 {card.isNumber ? card.value : formatCurrency(card.value as number)}
               </p>
-              {card.sub && <p className="text-xs text-muted-foreground/70 mt-2 font-medium">{card.sub}</p>}
             </div>
           ))}
         </div>
