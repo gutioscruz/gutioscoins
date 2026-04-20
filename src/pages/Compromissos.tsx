@@ -344,6 +344,10 @@ const Compromissos = () => {
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBulkMarkPaid(commitment)} className="rounded-lg cursor-pointer">
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Atualizar Histórico
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDeleteLoan(commitment)}
                         className="rounded-lg cursor-pointer text-destructive focus:text-destructive"
@@ -692,6 +696,21 @@ const Compromissos = () => {
           description={`Esta ação removerá "${selectedCommitment?.title}" e todas as parcelas associadas. Não pode ser desfeito.`}
           onConfirm={confirmDeleteLoan}
           confirmText="Excluir"
+        />
+
+        <AddLoanDialog
+          open={addLoanDialogOpen}
+          onOpenChange={setAddLoanDialogOpen}
+          banks={banks}
+          categories={categories}
+          onAdd={handleAddLoan}
+        />
+
+        <BulkMarkPaidDialog
+          open={bulkMarkPaidDialogOpen}
+          onOpenChange={setBulkMarkPaidDialogOpen}
+          loan={getLoan(selectedCommitment) || null}
+          onConfirm={confirmBulkMarkPaid}
         />
       </main>
     </div>
