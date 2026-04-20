@@ -71,7 +71,7 @@ const Compromissos = () => {
 
   const useInstallmentsHook = useInstallments();
   const { installmentGroups } = useInstallmentsHook;
-  const { loans, updateLoan, deleteLoan } = useLoans();
+  const { loans, updateLoan, deleteLoan, addLoanAsync, bulkMarkPaid } = useLoans();
   const { banks } = useBanks();
   const { categories } = useCategories();
 
@@ -82,6 +82,8 @@ const Compromissos = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editLoanDialogOpen, setEditLoanDialogOpen] = useState(false);
   const [deleteLoanDialogOpen, setDeleteLoanDialogOpen] = useState(false);
+  const [addLoanDialogOpen, setAddLoanDialogOpen] = useState(false);
+  const [bulkMarkPaidDialogOpen, setBulkMarkPaidDialogOpen] = useState(false);
   const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
