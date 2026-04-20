@@ -174,6 +174,28 @@ const Compromissos = () => {
     setEditLoanDialogOpen(false);
   };
 
+  const handleAddLoan = async (loan: any) => {
+    try {
+      await addLoanAsync(loan);
+      setAddLoanDialogOpen(false);
+    } catch (error: any) {
+      toast.error(`Erro ao criar empréstimo: ${error.message}`);
+    }
+  };
+
+  const handleBulkMarkPaid = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setBulkMarkPaidDialogOpen(true);
+  };
+
+  const confirmBulkMarkPaid = (data: {
+    loanId: string;
+    payments: Array<{ id: string; paid: boolean; paidDate: Date | null }>;
+  }) => {
+    bulkMarkPaid(data);
+    setBulkMarkPaidDialogOpen(false);
+  };
+
   const handleConfirmPayment = async (data: {
     commitment: Commitment;
     selectedIds: string[];
