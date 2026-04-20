@@ -502,6 +502,66 @@ export const useLoans = () => {
     },
   });
 
+  const bulkMarkPaid = useMutation({
+    mutationFn: async ({
+      loanId,
+      payments,
+    }: {
+      loanId: string;
+      payments: Array<{ id: string; paid: boolean; paidDate: Date | null }>;
+    }) => {
+      const toPay = payments.filter(p => p.paid && p.paidDate);
+      const toUnpay = payments.filter(p => !p.paid);
+
+      if (toPay.length > 0) {
+        for (const p of toPay) {
+          const { error } = await supabase
+            .from('loan_payments')
+            .update({
+              paid: true,
+              paid_date: p.paidDate!.toISOString(),
+              final_paid_amount: null,
+            })
+            .eq('id', p.id);
+          if (error) throw error;
+        }
+      }
+
+      if (toUnpay.length > 0) {
+        const { error } = await supabase
+          .from('loan_payments')
+          .update({ paid: false, paid_date: null, final_paid_amount: null })
+          .in('id', toUnpay.map(p => p.id));
+        if (error) throw error;
+      }
+
+      const { data: allPayments, error: fetchErr } = await supabase
+        .from('loan_payments')
+        .select('amount, paid')
+        .eq('loan_id', loanId);
+      if (fetchErr) throw fetchErr;
+
+      const newTotalPaid = (allPayments || [])
+        .filter(p => p.paid)
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const { error: updateErr } = await supabase
+        .from('loans')
+        .update({ total_paid: newTotalPaid })
+        .eq('id', loanId);
+      if (updateErr) throw updateErr;
+
+      return { updated: toPay.length + toUnpay.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      toast.success(`${data.updated} parcela(s) atualizada(s) com sucesso!`);
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao atualizar parcelas: ${error.message}`);
+    },
+  });
+
   return {
     loans,
     isLoading,
@@ -512,5 +572,7 @@ export const useLoans = () => {
     payLoanInstallment: payLoanInstallment.mutate,
     payLoanInstallmentsAhead: payLoanInstallmentsAhead.mutate,
     payMultipleLoanInstallments: payMultipleLoanInstallments.mutate,
+    bulkMarkPaid: bulkMarkPaid.mutate,
+    addLoanAsync: addLoan.mutateAsync,
   };
 };

@@ -12,7 +12,11 @@ import {
   LineChart as LineChartIcon,
   MoreVertical,
   Pencil,
-  Trash2
+  Trash2,
+  Plus,
+  ClipboardCheck,
+  Hash,
+  PiggyBank,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,12 +37,21 @@ import { useCategories } from "@/hooks/useCategories";
 import { PayCommitmentDialog } from "@/components/compromissos/PayCommitmentDialog";
 import { CommitmentDetailsDialog } from "@/components/compromissos/CommitmentDetailsDialog";
 import { EditLoanDialog } from "@/components/compromissos/EditLoanDialog";
+import { AddLoanDialog } from "@/components/compromissos/AddLoanDialog";
+import { BulkMarkPaidDialog } from "@/components/compromissos/BulkMarkPaidDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SniperButton } from "@/components/compromissos/SniperButton";
 import { toast } from "sonner";
+import { getCategoryColor } from "@/lib/categoryColors";
 import { 
   Area,
   AreaChart,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -58,7 +71,7 @@ const Compromissos = () => {
 
   const useInstallmentsHook = useInstallments();
   const { installmentGroups } = useInstallmentsHook;
-  const { loans, updateLoan, deleteLoan } = useLoans();
+  const { loans, updateLoan, deleteLoan, addLoanAsync, bulkMarkPaid } = useLoans();
   const { banks } = useBanks();
   const { categories } = useCategories();
 
@@ -69,6 +82,8 @@ const Compromissos = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editLoanDialogOpen, setEditLoanDialogOpen] = useState(false);
   const [deleteLoanDialogOpen, setDeleteLoanDialogOpen] = useState(false);
+  const [addLoanDialogOpen, setAddLoanDialogOpen] = useState(false);
+  const [bulkMarkPaidDialogOpen, setBulkMarkPaidDialogOpen] = useState(false);
   const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -77,19 +92,33 @@ const Compromissos = () => {
 
   // Format data for Debt Burndown Chart (Cumulative total remaining per month)
   const burndownData = useMemo(() => {
-    let currentDebt = summary.totalRemainingAmount;
-    
-    return monthlyProjections.map(proj => {
-      // The current debt at the START of the month
-      const plottedDebt = currentDebt;
-      // We subtract what is due THIS month for the NEXT month's starting debt
-      currentDebt = Math.max(0, currentDebt - proj.totalAmount);
+    let currentInstallments = summary.installmentsRemainingAmount;
+    let currentLoans = summary.loansRemainingAmount;
+
+    return monthlyProjections.map((proj) => {
+      const plotInstallments = currentInstallments;
+      const plotLoans = currentLoans;
+      currentInstallments = Math.max(0, currentInstallments - proj.installmentsAmount);
+      currentLoans = Math.max(0, currentLoans - proj.loansAmount);
       return {
         monthLabel: proj.monthLabel,
-        remainingDebt: plottedDebt,
+        parcelamentos: plotInstallments,
+        emprestimos: plotLoans,
       };
     });
-  }, [monthlyProjections, summary.totalRemainingAmount]);
+  }, [monthlyProjections, summary.installmentsRemainingAmount, summary.loansRemainingAmount]);
+
+  // Installment category distribution for pie chart
+  const installmentCategoryData = useMemo(() => {
+    const map = new Map<string, number>();
+    installmentCommitments.forEach((c) => {
+      const cat = c.categoryName || "Sem categoria";
+      map.set(cat, (map.get(cat) || 0) + c.remainingAmount);
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [installmentCommitments]);
 
   const sortCommitments = (list: Commitment[]) =>
     [...list].sort((a, b) => {
@@ -143,6 +172,28 @@ const Compromissos = () => {
   const handleSaveLoan = (id: string, updates: any) => {
     updateLoan({ id, loan: updates });
     setEditLoanDialogOpen(false);
+  };
+
+  const handleAddLoan = async (loan: any) => {
+    try {
+      await addLoanAsync(loan);
+      setAddLoanDialogOpen(false);
+    } catch (error: any) {
+      toast.error(`Erro ao criar empréstimo: ${error.message}`);
+    }
+  };
+
+  const handleBulkMarkPaid = (commitment: Commitment) => {
+    setSelectedCommitment(commitment);
+    setBulkMarkPaidDialogOpen(true);
+  };
+
+  const confirmBulkMarkPaid = (data: {
+    loanId: string;
+    payments: Array<{ id: string; paid: boolean; paidDate: Date | null }>;
+  }) => {
+    bulkMarkPaid(data);
+    setBulkMarkPaidDialogOpen(false);
   };
 
   const handleConfirmPayment = async (data: {
@@ -293,6 +344,10 @@ const Compromissos = () => {
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBulkMarkPaid(commitment)} className="rounded-lg cursor-pointer">
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Atualizar Histórico
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDeleteLoan(commitment)}
                         className="rounded-lg cursor-pointer text-destructive focus:text-destructive"
@@ -347,22 +402,23 @@ const Compromissos = () => {
         </div>
 
         {/* Global KPIs */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {[
-            { label: "Mês Atual", value: summary.thisMonthAmount, color: "text-foreground" },
-            { label: "Próximo Mês", value: summary.nextMonthAmount, color: "text-muted-foreground" },
-            { label: "Saldo Devedor Restante", value: summary.totalRemainingAmount, color: "text-destructive" },
-            { label: "Dívidas Ativas", value: summary.totalActive, sub: `${summary.installmentsCount} cartões · ${summary.loansCount} empréstimos`, isNumber: true },
+            { label: "Parcelas este mês", value: summary.thisMonthInstallments, color: "text-primary" },
+            { label: "Dívidas este mês", value: summary.thisMonthLoans, color: "text-destructive" },
+            { label: "Total Parcelado", value: summary.installmentsRemainingAmount, color: "text-primary" },
+            { label: "Dívida c/ Juros", value: summary.loansRemainingAmount, color: "text-destructive" },
+            { label: "Parcelamentos", value: summary.installmentsCount, isNumber: true, color: "text-primary" },
+            { label: "Empréstimos", value: summary.loansCount, isNumber: true, color: "text-destructive" },
           ].map((card, idx) => (
             <div 
               key={card.label} 
-              className="group rounded-3xl bg-card/40 backdrop-blur-xl border-none ring-1 ring-white/5 shadow-lg p-6 flex flex-col justify-between"
+              className="group rounded-3xl bg-card/40 backdrop-blur-xl border-none ring-1 ring-white/5 shadow-lg p-4 md:p-5 flex flex-col justify-between"
             >
-              <p className="text-xs text-muted-foreground font-semibold tracking-wider uppercase mb-2">{card.label}</p>
-              <p className={`text-3xl font-bold tabular-nums tracking-tight ${card.color || ""}`}>
+              <p className="text-[10px] text-muted-foreground font-semibold tracking-wider uppercase mb-1">{card.label}</p>
+              <p className={`text-xl md:text-2xl font-bold tabular-nums tracking-tight ${card.color || ""}`}>
                 {card.isNumber ? card.value : formatCurrency(card.value as number)}
               </p>
-              {card.sub && <p className="text-xs text-muted-foreground/70 mt-2 font-medium">{card.sub}</p>}
             </div>
           ))}
         </div>
@@ -427,7 +483,10 @@ const Compromissos = () => {
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                     />
                     <Tooltip 
-                      formatter={(value: number) => [formatCurrency(value), "Saldo Devedor"]}
+                      formatter={(value: number, name: string) => [
+                        formatCurrency(value),
+                        name === "parcelamentos" ? "Parcelamentos" : "Empréstimos",
+                      ]}
                       contentStyle={{ 
                         backgroundColor: 'rgba(0,0,0,0.8)',
                         backdropFilter: 'blur(10px)',
@@ -440,11 +499,27 @@ const Compromissos = () => {
                     />
                     <Area 
                       type="monotone" 
-                      dataKey="remainingDebt" 
-                      stroke="hsl(var(--destructive))" 
-                      strokeWidth={3}
+                      dataKey="emprestimos" 
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={2}
+                      stackId="1"
                       fillOpacity={1} 
                       fill="url(#colorDebt)" 
+                      name="emprestimos"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="parcelamentos" 
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      stackId="1"
+                      fillOpacity={0.2} 
+                      fill="hsl(var(--primary))" 
+                      name="parcelamentos"
+                    />
+                    <Legend
+                      formatter={(value) => value === "parcelamentos" ? "Parcelamentos" : "Dívidas c/ Juros"}
+                      wrapperStyle={{ fontSize: 12 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -492,24 +567,96 @@ const Compromissos = () => {
                 subtitle="Nenhum parcelamento ativo no momento. Foco em investimentos!" 
               />
             ) : (
-              sortCommitments(installmentCommitments).map((c) => (
-                <CommitmentCard key={c.id} commitment={c} />
-              ))
+              <>
+                {/* Installments Charts */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Monthly Projection Bar Chart */}
+                  <div className="rounded-3xl bg-card/40 backdrop-blur-xl ring-1 ring-white/5 shadow-lg p-5">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <PiggyBank className="h-4 w-4 text-primary" />
+                      Projeção Mensal de Parcelas
+                    </h3>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={monthlyProjections} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground)/0.15)" />
+                          <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value), "Parcelas"]}
+                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Bar dataKey="installmentsAmount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Category Distribution Pie Chart */}
+                  <div className="rounded-3xl bg-card/40 backdrop-blur-xl ring-1 ring-white/5 shadow-lg p-5">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      Distribuição por Categoria
+                    </h3>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={installmentCategoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={75}
+                            paddingAngle={2}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {installmentCategoryData.map((entry) => (
+                              <Cell key={entry.name} fill={getCategoryColor(entry.name)} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value)]}
+                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Legend
+                            formatter={(value) => <span className="text-xs">{value}</span>}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cards list */}
+                {sortCommitments(installmentCommitments).map((c) => (
+                  <CommitmentCard key={c.id} commitment={c} />
+                ))}
+              </>
             )}
           </TabsContent>
 
           <TabsContent value="loans" className="mt-0 space-y-4 slide-in-from-bottom-2 animate-in duration-500">
-            {loanCommitments.length === 0 ? (
-              <PremiumEmptyState 
-                icon={Landmark} 
-                title="Livre de dívidas com juros" 
-                subtitle="Nenhum empréstimo ativo. Excelente trabalho na sua gestão." 
-              />
-            ) : (
-              sortCommitments(loanCommitments).map((c) => (
-                <CommitmentCard key={c.id} commitment={c} />
-              ))
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground font-medium">
+                {loanCommitments.length} empréstimo(s) ativo(s)
+              </p>
+              <Button
+                onClick={() => setAddLoanDialogOpen(true)}
+                className="rounded-xl shadow-md shadow-primary/20"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Empréstimo
+              </Button>
+            </div>
+            {loanCommitments.length === 0 && (
+              <PremiumEmptyState icon={Landmark} title="Livre de dívidas com juros" subtitle="Nenhum empréstimo ativo. Clique em '+ Novo Empréstimo' para cadastrar." />
             )}
+            {sortCommitments(loanCommitments).map((c) => (
+              <CommitmentCard key={c.id} commitment={c} />
+            ))}
           </TabsContent>
         </Tabs>
 
@@ -549,6 +696,21 @@ const Compromissos = () => {
           description={`Esta ação removerá "${selectedCommitment?.title}" e todas as parcelas associadas. Não pode ser desfeito.`}
           onConfirm={confirmDeleteLoan}
           confirmText="Excluir"
+        />
+
+        <AddLoanDialog
+          open={addLoanDialogOpen}
+          onOpenChange={setAddLoanDialogOpen}
+          banks={banks}
+          categories={categories}
+          onAdd={handleAddLoan}
+        />
+
+        <BulkMarkPaidDialog
+          open={bulkMarkPaidDialogOpen}
+          onOpenChange={setBulkMarkPaidDialogOpen}
+          loan={getLoan(selectedCommitment) || null}
+          onConfirm={confirmBulkMarkPaid}
         />
       </main>
     </div>
