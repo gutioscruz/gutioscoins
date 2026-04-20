@@ -563,24 +563,96 @@ const Compromissos = () => {
                 subtitle="Nenhum parcelamento ativo no momento. Foco em investimentos!" 
               />
             ) : (
-              sortCommitments(installmentCommitments).map((c) => (
-                <CommitmentCard key={c.id} commitment={c} />
-              ))
+              <>
+                {/* Installments Charts */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Monthly Projection Bar Chart */}
+                  <div className="rounded-3xl bg-card/40 backdrop-blur-xl ring-1 ring-white/5 shadow-lg p-5">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <PiggyBank className="h-4 w-4 text-primary" />
+                      Projeção Mensal de Parcelas
+                    </h3>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={monthlyProjections} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground)/0.15)" />
+                          <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value), "Parcelas"]}
+                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Bar dataKey="installmentsAmount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Category Distribution Pie Chart */}
+                  <div className="rounded-3xl bg-card/40 backdrop-blur-xl ring-1 ring-white/5 shadow-lg p-5">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      Distribuição por Categoria
+                    </h3>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={installmentCategoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={75}
+                            paddingAngle={2}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {installmentCategoryData.map((entry) => (
+                              <Cell key={entry.name} fill={getCategoryColor(entry.name)} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value)]}
+                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Legend
+                            formatter={(value) => <span className="text-xs">{value}</span>}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cards list */}
+                {sortCommitments(installmentCommitments).map((c) => (
+                  <CommitmentCard key={c.id} commitment={c} />
+                ))}
+              </>
             )}
           </TabsContent>
 
           <TabsContent value="loans" className="mt-0 space-y-4 slide-in-from-bottom-2 animate-in duration-500">
-            {loanCommitments.length === 0 ? (
-              <PremiumEmptyState 
-                icon={Landmark} 
-                title="Livre de dívidas com juros" 
-                subtitle="Nenhum empréstimo ativo. Excelente trabalho na sua gestão." 
-              />
-            ) : (
-              sortCommitments(loanCommitments).map((c) => (
-                <CommitmentCard key={c.id} commitment={c} />
-              ))
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground font-medium">
+                {loanCommitments.length} empréstimo(s) ativo(s)
+              </p>
+              <Button
+                onClick={() => setAddLoanDialogOpen(true)}
+                className="rounded-xl shadow-md shadow-primary/20"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Empréstimo
+              </Button>
+            </div>
+            {loanCommitments.length === 0 && (
+              <PremiumEmptyState icon={Landmark} title="Livre de dívidas com juros" subtitle="Nenhum empréstimo ativo. Clique em '+ Novo Empréstimo' para cadastrar." />
             )}
+            {sortCommitments(loanCommitments).map((c) => (
+              <CommitmentCard key={c.id} commitment={c} />
+            ))}
           </TabsContent>
         </Tabs>
 
