@@ -92,19 +92,33 @@ const Compromissos = () => {
 
   // Format data for Debt Burndown Chart (Cumulative total remaining per month)
   const burndownData = useMemo(() => {
-    let currentDebt = summary.totalRemainingAmount;
-    
-    return monthlyProjections.map(proj => {
-      // The current debt at the START of the month
-      const plottedDebt = currentDebt;
-      // We subtract what is due THIS month for the NEXT month's starting debt
-      currentDebt = Math.max(0, currentDebt - proj.totalAmount);
+    let currentInstallments = summary.installmentsRemainingAmount;
+    let currentLoans = summary.loansRemainingAmount;
+
+    return monthlyProjections.map((proj) => {
+      const plotInstallments = currentInstallments;
+      const plotLoans = currentLoans;
+      currentInstallments = Math.max(0, currentInstallments - proj.installmentsAmount);
+      currentLoans = Math.max(0, currentLoans - proj.loansAmount);
       return {
         monthLabel: proj.monthLabel,
-        remainingDebt: plottedDebt,
+        parcelamentos: plotInstallments,
+        emprestimos: plotLoans,
       };
     });
-  }, [monthlyProjections, summary.totalRemainingAmount]);
+  }, [monthlyProjections, summary.installmentsRemainingAmount, summary.loansRemainingAmount]);
+
+  // Installment category distribution for pie chart
+  const installmentCategoryData = useMemo(() => {
+    const map = new Map<string, number>();
+    installmentCommitments.forEach((c) => {
+      const cat = c.categoryName || "Sem categoria";
+      map.set(cat, (map.get(cat) || 0) + c.remainingAmount);
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [installmentCommitments]);
 
   const sortCommitments = (list: Commitment[]) =>
     [...list].sort((a, b) => {
